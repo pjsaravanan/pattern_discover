@@ -86,7 +86,9 @@ The base event portion has 14 characters for positions 0–6. The full stored pa
 | / | Made both a new session low and a new session high in this hourly bucket, **low first then high** |
 | \ | Made both a new session high and a new session low in this hourly bucket, **high first then low** |
 
-The order in `/` and `\` is determined from the timestamped one-minute source bars within the hourly bucket. These symbols describe the day's running extremes, not comparisons with the previous candle. They replace the draft's order-specific `B` and `D` symbols.
+For each completed bucket in positions 1–6, compare that bucket's highest High and lowest Low with the day's running High and Low established **before the bucket**. Initialize both running references at the session Open. A strictly higher bucket High breaks the day's High; a strictly lower bucket Low breaks the day's Low. Equal values do not count as new extremes. Make both comparisons against the same pre-bucket references, then update the day's running High and Low to include the bucket.
+
+When both extremes are broken, determine `/` or `\` from the timestamps of the bucket's highest High and lowest Low, using the one-minute source bars—not the timestamps of the first boundary crossings. Handling of equal timestamps remains an open question. These symbols describe the day's running extremes, not comparisons with the previous candle or the eventual end-of-day extremes. They replace the draft's order-specific `B` and `D` symbols.
 
 Contingency only: if `/` and `\` cause implementation or search complications, use `U` for low-to-high and `D` for high-to-low instead. This fallback is not currently adopted; if used, its `D` meaning supersedes the old draft's `D` meaning.
 
