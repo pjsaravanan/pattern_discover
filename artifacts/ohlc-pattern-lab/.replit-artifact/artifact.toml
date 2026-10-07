@@ -1,6 +1,6 @@
 kind = "web"
 previewPath = "/"
-title = "OHLC Pattern Lab"
+title = "OHLC Image Pattern Analysis"
 description = "A Python-powered market-pattern workbench that turns OHLC data into comparable images, clusters similar chart patterns, finds visual matches for new data, and returns structured JSON."
 version = "1.0.0"
 id = "artifacts/ohlc-pattern-lab"
