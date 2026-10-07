@@ -40,6 +40,8 @@ NSE cash session: 09:15–15:30 IST.
 
 One-minute NIFTY OHLC bars are the source data and are resampled into hourly pattern buckets. The API does not generate minute-level patterns or minute-level predictions.
 
+Source timestamps mark each minute's start. Include only bars in `[09:15, 15:30)` IST; exclude the additional 09:14 row. Session Open is the 09:15 bar's `open`, and session Close is the 15:29 bar's `close`, representing the session ending at 15:30.
+
 | Position | Window |
 |---|---|
 | 0 | Open (09:15) |
@@ -209,9 +211,9 @@ The JSON response replaces the draft's text-table example. Position 7 outcome us
 
 ## 8. Data model (PostgreSQL)
 
-The approved source is `public.price_data` in the user's VPS PostgreSQL database, using `timestamp_ist` (timestamp with time zone) and its `open`, `high`, `low`, and `close` columns. VPS connectivity has been verified read-only; the exact NIFTY symbol/timeframe selection and data quality still require review. Existing tables are read-only: the project may query them but must never insert, update, delete, alter, drop, or otherwise modify them. The project may create and write to new project-owned tables.
+The approved source is `public.price_data` in the user's VPS PostgreSQL database, selecting `symbol = 'NIFTY'`, `exchange = 'NSE'`, `timeframe = '1m'`, using `timestamp_ist` (timestamp with time zone) and its `open`, `high`, `low`, and `close` columns. VPS connectivity and these source fields have been verified read-only; data quality still requires review. Existing tables are read-only: the project may query them but must never insert, update, delete, alter, drop, or otherwise modify them. The project may create and write to new project-owned tables.
 
-Initial read-only review found the index series `symbol = 'NIFTY'`, `exchange = 'NSE'`, `timeframe = '1m'`. Recent sampled sessions include an additional 09:14 IST row alongside the 09:15–15:29 minute rows. The timestamp convention and treatment of the 09:14 row must be confirmed before defining session Open and Close.
+Initial read-only review found an additional 09:14 IST row in recent sampled sessions. Its exclusion and the start-stamped minute convention are approved as defined in §4.
 
 ```sql
 CREATE TABLE day_pattern (
@@ -273,5 +275,5 @@ Notes:
 2. Support target N, to be selected after reviewing the historical data and walk-forward results.
 3. Magnitude-band boundaries, labels, and exact placement in path-code tokens.
 4. Whether to introduce time weighting after walk-forward evaluation; no weighting is applied in v1.
-5. Confirm minute timestamp convention and treatment of the additional 09:14 row, and complete one-minute data quality review for `NIFTY` / `NSE` / `1m` in `public.price_data`.
+5. Complete one-minute data quality review and agree on handling incomplete or ambiguous sessions for `NIFTY` / `NSE` / `1m` in `public.price_data`.
 6. Exact pattern-operation request/response contracts; FastAPI HTTP JSON transport is approved.
