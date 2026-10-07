@@ -1,9 +1,12 @@
 # Product Requirements Specification
 ## Intraday Trajectory Pattern Engine (NIFTY)
 
-**Status:** Draft v0.1
-**Date:** 2026-10-08
+**Status:** Draft v0.2 (living document)
+**Created:** 2026-10-08
+**Updated:** 2026-10-08
 **Owner:** Saravanan
+
+This is the canonical living requirements document. Record approved clarifications and deviations here.
 
 ---
 
@@ -11,18 +14,18 @@
 
 Predict the probable direction and range of the current trading day by matching how the day has moved so far against how historical days moved, and reading the outcomes of the historical days that took the same path.
 
-The more of the day has elapsed, the fewer historical paths remain consistent with it, and the more weight that evidence carries.
+As the day advances, candidate historical paths narrow. The predictive value of each additional hour is evaluated during walk-forward validation.
 
 ## 2. Core idea
 
-Every trading day is reduced to its structural movement: Open, the first extreme, the second extreme and Close, with the time each one happened. Intermediate fluctuations inside a leg are deliberately ignored.
+Every trading day is reduced to its structural movement: Open, the session's new high/low extremes, and Close, with the time each one happened. Intermediate fluctuations inside a leg are deliberately ignored. When a single hourly bucket makes both a new session high and a new session low, their order is retained.
 
 Each day is encoded twice:
 
-1. **Path code** – a short string recording, hour by hour, whether the day made a new high, a new low, both, or neither. This is the matching key and the cluster.
-2. **Leg measurements** – the time (dt) and percentage displacement (dq) of each leg, computed from that day's own data. These give the magnitude distribution within a cluster.
+1. **Path code** – a string recording, hour by hour, whether the day made a new session high, a new session low, both (including which came first), or neither. Magnitude-band codes are also included in v1; their exact boundaries and placement remain to be defined.
+2. **Leg measurements** – the time (dt) and percentage displacement (dq) of each leg, computed from that day's own data. Raw measurements are retained alongside the magnitude bands.
 
-Days that share a path code form a cluster automatically. A developing day is matched by the prefix of its path code, so candidates narrow with every hour without any similarity search.
+Days that share a path code form a cluster automatically. A developing day is matched by the prefix of its path code, so candidates narrow with every completed hour without any similarity search.
 
 ## 3. Principles
 
@@ -35,6 +38,8 @@ Days that share a path code form a cluster automatically. A developing day is ma
 
 NSE cash session: 09:15–15:30 IST.
 
+One-minute NIFTY OHLC bars are the source data and are resampled into hourly pattern buckets. The API does not generate minute-level patterns or minute-level predictions.
+
 | Position | Window |
 |---|---|
 | 0 | Open (09:15) |
@@ -44,50 +49,56 @@ NSE cash session: 09:15–15:30 IST.
 | 4 | 12:15–13:15 |
 | 5 | 13:15–14:15 |
 | 6 | 14:15–15:15 |
-| 7 | 15:15–15:30 and Close |
+| 7 | Separate final 15-minute bucket, 15:15–15:30, and session Close |
+
+Position 7 remains separate and is not merged into position 6. Its final close code is an outcome, not part of the matching prefix.
 
 ## 5. Path code
 
 ### 5.1 Format
 
-A string built up one position at a time: digit (position) + symbol.
+A path string built up one position at a time. The base event notation is digit (position) + symbol. V1 also includes magnitude-band code(s) for applicable leg displacement(s); the exact band labels and token placement are open questions in §11. Matching must use complete position tokens, not partial tokens.
+
+`path_code` covers positions 0–6 only. The position 7 close outcome is stored separately and is not part of the matching key. Examples below show the base event notation without the yet-to-be-defined magnitude-band code(s).
 
 ```
 start  0O
 t1     0O1H
 t2     0O1H2X
-t3     0O1H2X3X
-t4     0O1H2X3X4L
-t5     0O1H2X3X4L5L
-t6     0O1H2X3X4L5L6H
-close  0O1H2X3X4L5L6H7H
+t3     0O1H2X3/
+t4     0O1H2X3/4\
+t5     0O1H2X3/4\5L
+t6     0O1H2X3/4\5L6H
+close  close_code = 7/
 ```
 
-Full length is 16 characters.
+The base event portion has 14 characters for positions 0–6. The full stored path length depends on the magnitude-band encoding.
 
 ### 5.2 Symbols for positions 1–6
 
 | Symbol | Meaning |
 |---|---|
-| H | Made a new high of the day (above Open and above any earlier high) |
-| L | Made a new low of the day (below Open and below any earlier low) |
-| X | Neither: stayed inside the existing range |
-| B | Made both, **high first then low** |
-| D | Made both, **low first then high** |
+| H | Made a new session high only (above Open and any earlier high) |
+| L | Made a new session low only (below Open and any earlier low) |
+| X | Neither: made no new session high or low |
+| / | Made both a new session low and a new session high in this hourly bucket, **low first then high** |
+| \ | Made both a new session high and a new session low in this hourly bucket, **high first then low** |
 
-B and D are required. Hour 1 almost always trades on both sides of the Open, and later hours can sweep both sides; without them, materially different days would share a code.
+The order in `/` and `\` is determined from the timestamped one-minute source bars within the hourly bucket. These symbols describe the day's running extremes, not comparisons with the previous candle. They replace the draft's order-specific `B` and `D` symbols.
+
+Contingency only: if `/` and `\` cause implementation or search complications, use `U` for low-to-high and `D` for high-to-low instead. This fallback is not currently adopted; if used, its `D` meaning supersedes the old draft's `D` meaning.
 
 ### 5.3 Position 7 (outcome)
 
-Position 7 is the **outcome being predicted**, not part of the intraday matching key. It is stored in its own column (see §8).
+Position 7 is the **close outcome**, not part of the intraday matching key. It is stored separately in `close_code` (see §8).
 
-| Symbol | Close location |
+| Code | Meaning |
 |---|---|
-| H | At the session high |
-| L | At the session low |
-| M | Between high and low |
+| 7/ | Close above Open |
+| 7\ | Close below Open |
+| 7C | Close at Open; tolerance is to be determined after reviewing sample data |
 
-Optional second attribute, close relative to Open: **A** above, **B** below, **E** at Open. (Letters differ from the original draft to avoid the clash between "C = between" and "C = at Open".)
+Position 7 uses this close-relative-to-Open code in v1. `C` in `7C` means the close is at Open; `C` in the leg `sequence` in §6 denotes the Close event.
 
 ## 6. Leg measurements
 
@@ -110,6 +121,13 @@ Stored per day as JSONB, from that day's own data only.
     "HL": {"dt": 2.47, "dq": 1.97},
     "HC": {"dt": 4.90, "dq": 0.63},
     "LC": {"dt": 2.43, "dq": 1.34}
+  },
+  "magnitude_bands": {
+    "OH": "<band-code>",
+    "OL": "<band-code>",
+    "HL": "<band-code>",
+    "HC": "<band-code>",
+    "LC": "<band-code>"
   }
 }
 ```
@@ -117,20 +135,23 @@ Stored per day as JSONB, from that day's own data only.
 - `t` is elapsed trading hours from 09:15 (fractional, e.g. 10:12 → 0.95).
 - `sequence` is either O→H→L→C or O→L→H→C.
 - Legs are derived from points; points are the source of truth.
+- Raw `dt` and `dq` are retained. V1 assigns magnitude-band code(s) to applicable leg displacements; band boundaries and exact encoding remain open pending data review.
 
 ## 7. Matching and prediction
 
 ### 7.1 Matching
 
-At the end of each hour, build the current day's path-code prefix and select historical days whose path code starts with it (index prefix lookup). Only unique path codes are searched; there is no full-table similarity scan.
+At the end of each completed hourly bucket, build the current day's path-code prefix through that position and select historical days whose path code starts with it (index prefix lookup). Compare only dates earlier than the current date. Only unique path codes are searched; there is no full-table similarity scan. Position 7 remains the separate final 15-minute bucket and is not merged into position 6 or added to the matching prefix.
 
 ### 7.2 Minimum sample and backoff
 
-Late prefixes will have few members. If the full prefix has fewer than **N** members (default 15–20, to be tuned), fall back to the longest shorter prefix that meets N, and report which prefix was used.
+**N** is the support target and will be chosen after reviewing the data and walk-forward results; 15–20 is not yet a fixed value. If the requested prefix has fewer than N historical matches, back off to the longest shorter prefix that meets N. Report the requested prefix and its match count, the selected prefix and its match count, and the backoff depth.
+
+If the requested prefix has no matches, report `requested_prefix_match_count: 0`. A broader prefix may still be used if it meets N. If no prefix meets N, return `status: "insufficient_support"`, `selected_prefix: null`, `match_count: 0`, and no estimate. Do not calculate or return a low-support distribution below N.
 
 ### 7.3 Time weighting
 
-Evidence is weighted by the hour at which it occurs, not used as an averaging mechanism. Default: **w = 0.1 × position** (hour 1 → 0.1, hour 5 → 0.5). To be validated later by measuring how much each additional hour tightens the outcome spread.
+Do not apply time weighting to v1 outcome distributions. Defer the proposed **w = 0.1 × position** (or any alternative weighting function) until walk-forward evaluation.
 
 ### 7.4 Outcome distribution
 
@@ -144,17 +165,51 @@ Use **empirical percentiles** (e.g. P10/P25/P50/P75/P90) of the matched days rat
 
 ### 7.5 Output per hour
 
-```
-Time        11:15
-Prefix      0O1H2X
-Members     64   (backoff: none)
-Weight      0.2
-P(Up)       68%
-Close %     P25 +0.12 | P50 +0.41 | P75 +0.78
-Next leg    L expected: dt P50 1.6h, dq P50 -0.55%
+The Python API returns machine-readable JSON. A supported estimate includes the requested and selected prefixes, match counts, backoff depth, status, and outcome distributions. For example:
+
+```json
+{
+  "time": "11:15",
+  "requested_prefix": "0O1H2X",
+  "requested_prefix_match_count": 0,
+  "selected_prefix": "0O1H",
+  "match_count": 64,
+  "backoff_positions": 1,
+  "status": "estimated",
+  "p_close_above_open": 0.68,
+  "p_close_below_open": 0.32,
+  "close_pct": {
+    "p25": 0.12,
+    "p50": 0.41,
+    "p75": 0.78
+  },
+  "next_leg": {
+    "event": "L",
+    "dt_p50_hours": 1.6,
+    "dq_p50_pct": -0.55
+  }
+}
 ```
 
+When no prefix meets N, return no estimate:
+
+```json
+{
+  "requested_prefix_match_count": 0,
+  "selected_prefix": null,
+  "match_count": 0,
+  "status": "insufficient_support",
+  "estimate": null
+}
+```
+
+The response may also include the selected days' magnitude-band distribution.
+
+The JSON response replaces the draft's text-table example. Position 7 outcome uses `close_code` (e.g. `7/`, `7\`, or `7C`) and is not part of the matching prefix.
+
 ## 8. Data model (PostgreSQL)
+
+The intended source is historical one-minute NIFTY OHLC data in the user's VPS PostgreSQL database, subject to connectivity and schema review. Existing tables are read-only: the project may query them but must never insert, update, delete, alter, drop, or otherwise modify them. The project may create and write to new project-owned tables.
 
 ```sql
 CREATE TABLE day_pattern (
@@ -167,8 +222,8 @@ CREATE TABLE day_pattern (
     close         NUMERIC     NOT NULL,
     high_time     TIMESTAMPTZ NOT NULL,
     low_time      TIMESTAMPTZ NOT NULL,
-    path_code     TEXT        NOT NULL,  -- positions 0–6, e.g. 0O1H2X3X4L5L6H
-    close_code    TEXT        NOT NULL,  -- position 7, e.g. HA
+    path_code     TEXT        NOT NULL,  -- positions 0–6; event and magnitude-band codes
+    close_code    TEXT        NOT NULL,  -- position 7: 7/, 7\, or 7C
     legs          JSONB       NOT NULL,  -- §6
     UNIQUE (symbol, trade_date)
 );
@@ -183,12 +238,14 @@ Query:
 SELECT *
 FROM day_pattern
 WHERE symbol = 'NIFTY'
-  AND path_code LIKE '0O1H2X%'
+  AND path_code LIKE :path_prefix_pattern ESCAPE ''
   AND trade_date < :as_of_date;
 ```
 
 Notes:
-- Use left-anchored `LIKE`. `ILIKE` or a leading `%` will not use the B-tree index.
+- `:path_prefix_pattern` is a parameter containing the complete prefix followed by `%`. Use a parameterized query; do not interpolate path codes into SQL.
+- PostgreSQL's `ESCAPE ''` disables backslash escape handling for `LIKE`, so a prefix containing `\` is treated literally. Verify with `EXPLAIN` that the left-anchored prefix query continues to use the B-tree index. `ILIKE` or a leading `%` will not use that index.
+- In JSON text, a single backslash is serialized as `\\`; normal JSON serialization/deserialization preserves the intended one-character code.
 - A summary table (path prefix → member count, outcome percentiles) can be materialised for instant reads.
 
 ## 9. Validation
@@ -200,14 +257,15 @@ Notes:
 
 ## 10. Scope
 
-**In scope (v1):** NIFTY index, 1-minute source data, historical build, hourly prefix matching, outcome distributions, PostgreSQL storage, walk-forward evaluation.
+**In scope (v1):** NIFTY index; one-minute OHLC source data resampled into hourly path buckets; a Python API only (no UI); historical build; hourly prefix matching; magnitude-band coding; JSON output; PostgreSQL storage in new project-owned tables; and walk-forward evaluation.
 
 **Out of scope (v1):** image rendering, DTW, HDBSCAN or K-Means, neural embeddings, ML models, other symbols, order execution.
 
 ## 11. Open questions
 
-1. Tolerance for "at session high / low / Open" on the close (e.g. within 0.05%).
-2. Whether position 7 (15-minute stub) should be merged into position 6.
-3. Minimum sample size N and backoff rule details.
-4. Whether a magnitude band character is needed if within-bucket dq spread turns out too wide.
-5. Final time-weight function after validation.
+1. Tolerance for classifying position 7 as `7C` (close at Open).
+2. Support target N, to be selected after reviewing the historical data and walk-forward results.
+3. Magnitude-band boundaries, labels, and exact placement in path-code tokens.
+4. Whether to introduce time weighting after walk-forward evaluation; no weighting is applied in v1.
+5. VPS connectivity, source-table schema, and one-minute data quality review.
+6. Exact Python API operations and transport contract.
