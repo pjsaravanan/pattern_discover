@@ -15,18 +15,18 @@ run = "pnpm --filter @workspace/api-server run dev"
 [services.production]
 
 [services.production.build]
-args = ["pnpm", "--filter", "@workspace/api-server", "run", "build"]
+args = ["uv", "sync", "--frozen"]
 
 [services.production.build.env]
-NODE_ENV = "production"
+UV_PROJECT_ENVIRONMENT = ".pythonlibs"
 
 [services.production.run]
-# we don't run through pnpm to make startup faster in production
-args = ["node", "--enable-source-maps", "artifacts/api-server/dist/index.mjs"]
+# Run the Python API using the locked project dependencies
+args = ["uv", "run", "--frozen", "--no-sync", "python", "artifacts/api-server/run.py"]
 
 [services.production.run.env]
 PORT = "8080"
-NODE_ENV = "production"
+UV_PROJECT_ENVIRONMENT = ".pythonlibs"
 
 [services.production.health.startup]
 path = "/api/healthz"

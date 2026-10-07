@@ -209,7 +209,9 @@ The JSON response replaces the draft's text-table example. Position 7 outcome us
 
 ## 8. Data model (PostgreSQL)
 
-The intended source is historical one-minute NIFTY OHLC data in the user's VPS PostgreSQL database, subject to connectivity and schema review. Existing tables are read-only: the project may query them but must never insert, update, delete, alter, drop, or otherwise modify them. The project may create and write to new project-owned tables.
+The approved source is `public.price_data` in the user's VPS PostgreSQL database, using `timestamp_ist` (timestamp with time zone) and its `open`, `high`, `low`, and `close` columns. VPS connectivity has been verified read-only; the exact NIFTY symbol/timeframe selection and data quality still require review. Existing tables are read-only: the project may query them but must never insert, update, delete, alter, drop, or otherwise modify them. The project may create and write to new project-owned tables.
+
+Initial read-only review found the index series `symbol = 'NIFTY'`, `exchange = 'NSE'`, `timeframe = '1m'`. Recent sampled sessions include an additional 09:14 IST row alongside the 09:15–15:29 minute rows. The timestamp convention and treatment of the 09:14 row must be confirmed before defining session Open and Close.
 
 ```sql
 CREATE TABLE day_pattern (
@@ -261,6 +263,8 @@ Notes:
 
 **Implementation target:** Replace the existing Express/TypeScript API Server artifact with Python rather than create a separate service or project. Preserve `GET /api/healthz` returning `{"status":"ok"}` and leave the image-analysis web artifact unchanged.
 
+**HTTP framework:** FastAPI is approved. HTTP responses are JSON; exact pattern-operation request/response contracts remain to be finalized.
+
 **Out of scope (v1):** image rendering, DTW, HDBSCAN or K-Means, neural embeddings, ML models, other symbols, order execution.
 
 ## 11. Open questions
@@ -269,5 +273,5 @@ Notes:
 2. Support target N, to be selected after reviewing the historical data and walk-forward results.
 3. Magnitude-band boundaries, labels, and exact placement in path-code tokens.
 4. Whether to introduce time weighting after walk-forward evaluation; no weighting is applied in v1.
-5. VPS connectivity, source-table schema, and one-minute data quality review.
-6. Exact Python API operations and transport contract.
+5. Confirm minute timestamp convention and treatment of the additional 09:14 row, and complete one-minute data quality review for `NIFTY` / `NSE` / `1m` in `public.price_data`.
+6. Exact pattern-operation request/response contracts; FastAPI HTTP JSON transport is approved.

@@ -4,10 +4,10 @@
   "private": true,
   "type": "module",
   "scripts": {
-    "dev": "export NODE_ENV=development && pnpm run build && pnpm run start",
-    "build": "node ./build.mjs",
-    "start": "node --enable-source-maps ./dist/index.mjs",
-    "typecheck": "tsc -p tsconfig.json --noEmit"
+    "dev": "cd ../.. && UV_PROJECT_ENVIRONMENT=.pythonlibs uv run --frozen --no-sync python artifacts/api-server/run.py",
+    "build": "cd ../.. && UV_PROJECT_ENVIRONMENT=.pythonlibs uv run --frozen --no-sync python -m compileall -q artifacts/api-server/nifty_api artifacts/api-server/run.py",
+    "start": "cd ../.. && UV_PROJECT_ENVIRONMENT=.pythonlibs uv run --frozen --no-sync python artifacts/api-server/run.py",
+    "test": "cd ../.. && UV_PROJECT_ENVIRONMENT=.pythonlibs uv run --frozen --no-sync python -m unittest discover -s artifacts/api-server/tests -v"
   },
   "dependencies": {
     "@workspace/api-zod": "workspace:*",

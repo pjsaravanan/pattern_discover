@@ -1,0 +1,10 @@
+[project]
+name = "repl-nix-workspace"
+version = "0.1.0"
+description = "Python API for the NIFTY intraday trajectory pattern engine"
+requires-python = ">=3.13"
+dependencies = [
+    "fastapi>=0.142.4",
+    "httpx>=0.28.1",
+    "uvicorn>=0.54.0",
+]
