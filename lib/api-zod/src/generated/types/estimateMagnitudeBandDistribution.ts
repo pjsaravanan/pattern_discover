@@ -5,7 +5,6 @@
  * NIFTY intraday trajectory pattern API
  * OpenAPI spec version: 0.1.0
  */
+import type { BandCount } from './bandCount';
 
-export interface HealthStatus {
-  status: string;
-}
+export type EstimateMagnitudeBandDistribution = {[key: string]: {[key: string]: BandCount}};

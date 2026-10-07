@@ -1,7 +1,7 @@
 # Product Requirements Specification
 ## Intraday Trajectory Pattern Engine (NIFTY)
 
-**Status:** Draft v0.2 (living document)
+**Status:** v1 implemented (living document); predictive validation remains preliminary
 **Created:** 2026-10-08
 **Updated:** 2026-10-08
 **Owner:** Saravanan
@@ -22,7 +22,7 @@ Every trading day is reduced to its structural movement: Open, the session's new
 
 Each day is encoded twice:
 
-1. **Path code** – a string recording, hour by hour, whether the day made a new session high, a new session low, both (including which came first), or neither. Magnitude-band codes are also included in v1; their exact boundaries and placement remain to be defined.
+1. **Path code** – a string recording, hour by hour, whether the day made a new session high, a new session low, both (including which came first when known), or neither. Magnitude-band codes are included in v1 as defined in §5.1.
 2. **Leg measurements** – the time (dt) and percentage displacement (dq) of each leg, computed from that day's own data. Raw measurements are retained alongside the magnitude bands.
 
 Days that share a path code form a cluster automatically. A developing day is matched by the prefix of its path code, so candidates narrow with every completed hour without any similarity search.
@@ -59,7 +59,9 @@ Position 7 remains separate and is not merged into position 6. Its final close c
 
 ### 5.1 Format
 
-A path string built up one position at a time. The base event notation is digit (position) + symbol. V1 also includes magnitude-band code(s) for applicable leg displacement(s); the exact band labels and token placement are open questions in §11. Matching must use complete position tokens, not partial tokens.
+A path string built up one position at a time, with complete tokens separated by `|`. A token is digit (position) + symbol, followed by magnitude bands where applicable. Band edges are required explicit API configuration, in ascending positive percentage points. `Q1` is at or below the first edge; `Q2` is above the first and at or below the second, and so on; the last band is above the last edge. An empty edge list is not allowed.
+
+For H, band the absolute percentage displacement from session Open to the bucket High: `1H[Q2]`. For L, band the absolute displacement from Open to the bucket Low: `2L[Q1]`. For `/`, put Low then High bands, e.g. `3/[Q1,Q3]`; for `\`, put High then Low bands. For `E`, use the deterministic Low, High band order without claiming chronological order. X has no bands. Raw point and leg measurements remain available.
 
 `path_code` covers positions 0–6 only. The position 7 close outcome is stored separately and is not part of the matching key. Examples below show the base event notation without the yet-to-be-defined magnitude-band code(s).
 
@@ -74,7 +76,7 @@ t6     0O1H2X3/4\5L6H
 close  close_code = 7/
 ```
 
-The base event portion has 14 characters for positions 0–6. The full stored path length depends on the magnitude-band encoding.
+The base event portion without separators has 14 characters for positions 0–6. Stored matching keys include separators and magnitude bands. For example: `0O|1H[Q2]|2X|3/[Q1,Q3]`. Prefixes always end on a complete token; position 7 is never appended.
 
 ### 5.2 Symbols for positions 1–6
 
@@ -114,7 +116,7 @@ Position 7 is the **close outcome**, not part of the intraday matching key. It i
 |---|---|
 | 7/ | Close above Open |
 | 7\ | Close below Open |
-| 7C | Close at Open; tolerance is to be determined after reviewing sample data |
+| 7C | Absolute Close-minus-Open is at or below the caller's explicit `close_tolerance_points` |
 
 Position 7 uses this close-relative-to-Open code in v1. `C` in `7C` means the close is at Open; `C` in the leg `sequence` in §6 denotes the Close event.
 
@@ -151,9 +153,9 @@ Stored per day as JSONB, from that day's own data only.
 ```
 
 - `t` is elapsed trading hours from 09:15 (fractional, e.g. 10:12 → 0.95).
-- `sequence` is either O→H→L→C or O→L→H→C.
+- `sequence` is either O→H→L→C or O→L→H→C. When the final daily High and Low have the same one-minute timestamp, use O→E→C and retain both H/L points with `order_unknown: true`.
 - Legs are derived from points; points are the source of truth.
-- Raw `dt` and `dq` are retained. V1 assigns magnitude-band code(s) to applicable leg displacements; band boundaries and exact encoding remain open pending data review.
+- Raw `dt` and `dq` are retained. OH/OL use signed percentage displacement from Open; HL/HC/LC use absolute endpoint percentage differences. All `dt` values are absolute endpoint time differences. Band each leg's absolute `dq` using the same explicit band edges.
 
 ## 7. Matching and prediction
 
@@ -163,7 +165,7 @@ At the end of each completed hourly bucket, build the current day's path-code pr
 
 ### 7.2 Minimum sample and backoff
 
-**N** is the support target and will be chosen after reviewing the data and walk-forward results; 15–20 is not yet a fixed value. If the requested prefix has fewer than N historical matches, back off to the longest shorter prefix that meets N. Report the requested prefix and its match count, the selected prefix and its match count, and the backoff depth.
+**N** is the required explicit `support_target` API input, with no numerical default. Band edges and close tolerance also have no defaults. Configurations can be compared during walk-forward evaluation before selecting fixed values. If the requested prefix has fewer than N historical matches, back off to the longest shorter prefix that meets N, including `0O` if necessary. Report the requested prefix and its match count, the selected prefix and its match count, and the backoff depth.
 
 If the requested prefix has no matches, report `requested_prefix_match_count: 0`. A broader prefix may still be used if it meets N. If no prefix meets N, return `status: "insufficient_support"`, `selected_prefix: null`, `match_count: 0`, and no estimate. Do not calculate or return a low-support distribution below N.
 
@@ -181,30 +183,35 @@ From the matched days, compute for the remaining day:
 
 Use **empirical percentiles** (e.g. P10/P25/P50/P75/P90) of the matched days rather than normal-curve sigma bands, since intraday moves are skewed and fat-tailed.
 
+Remaining extrema use only historical bars at or after the requested hour's cutoff, even when matching backs off to an earlier prefix. Percentages retain each historical day's own Open as denominator. The next structural leg targets the next final daily H/L event after the cutoff, or C if neither remains. Its dt is from the cutoff and dq is from that historical day's price at the cutoff; tied H/L targets are E, with separate low/high displacement bounds rather than an invented direction. Include P(close at Open), event probabilities, and empirical distributions by next-event type.
+
 ### 7.5 Output per hour
 
-The Python API returns machine-readable JSON. A supported estimate includes the requested and selected prefixes, match counts, backoff depth, status, and outcome distributions. For example:
+The Python API returns machine-readable JSON. A supported estimate includes the requested and selected prefixes, match counts, backoff depth, status, and nested `estimate` outcome distributions. Abbreviated example of the verified source-date match for 2026-10-06 at position 3 (the full response also includes next-leg and magnitude-band distributions):
 
 ```json
 {
-  "time": "11:15",
-  "requested_prefix": "0O1H2X",
-  "requested_prefix_match_count": 0,
-  "selected_prefix": "0O1H",
-  "match_count": 64,
-  "backoff_positions": 1,
+  "trade_date": "2026-10-06",
+  "through_position": 3,
+  "time": "12:15",
+  "requested_prefix": "0O|1/[Q1,Q2]|2H[Q2]|3H[Q2]",
+  "requested_prefix_match_count": 20,
+  "selected_prefix": "0O|1/[Q1,Q2]|2H[Q2]|3H[Q2]",
+  "match_count": 20,
+  "backoff_positions": 0,
   "status": "estimated",
-  "p_close_above_open": 0.68,
-  "p_close_below_open": 0.32,
-  "close_pct": {
-    "p25": 0.12,
-    "p50": 0.41,
-    "p75": 0.78
-  },
-  "next_leg": {
-    "event": "L",
-    "dt_p50_hours": 1.6,
-    "dq_p50_pct": -0.55
+  "support_target": 10,
+  "estimate": {
+    "p_close_above_open": 0.95,
+    "p_close_below_open": 0.05,
+    "p_close_at_open": 0.0,
+    "close_pct": {
+      "p10": 0.0983431981,
+      "p25": 0.2958049358,
+      "p50": 0.4947391505,
+      "p75": 0.6552922828,
+      "p90": 0.8010549856
+    }
   }
 }
 ```
@@ -231,42 +238,54 @@ The approved source is `public.price_data` in the user's VPS PostgreSQL database
 
 Initial read-only review found an additional 09:14 IST row in recent sampled sessions. Its exclusion and the start-stamped minute convention are approved as defined in §4.
 
-```sql
-CREATE TABLE day_pattern (
-    id            BIGSERIAL PRIMARY KEY,
-    symbol        TEXT        NOT NULL,
-    trade_date    DATE        NOT NULL,
-    open          NUMERIC     NOT NULL,
-    high          NUMERIC     NOT NULL,
-    low           NUMERIC     NOT NULL,
-    close         NUMERIC     NOT NULL,
-    high_time     TIMESTAMPTZ NOT NULL,
-    low_time      TIMESTAMPTZ NOT NULL,
-    path_code     TEXT        NOT NULL,  -- positions 0–6; event and magnitude-band codes
-    close_code    TEXT        NOT NULL,  -- position 7: 7/, 7\, or 7C
-    legs          JSONB       NOT NULL,  -- §6
-    UNIQUE (symbol, trade_date)
-);
+The implemented storage supersedes the draft's unqualified `day_pattern` table. Three tables are created only in a new dedicated schema, `nifty_trajectory_v1`. Schema and tables carry an application ownership marker; initialization refuses any unowned or unmarked collision. Do not run these declarations manually against existing objects.
 
-CREATE INDEX day_pattern_path_idx
-    ON day_pattern (symbol, path_code text_pattern_ops);
+```sql
+CREATE TABLE nifty_trajectory_v1.configurations (
+    id TEXT PRIMARY KEY,
+    settings JSONB NOT NULL
+);
+CREATE TABLE nifty_trajectory_v1.clusters (
+    config_id TEXT NOT NULL REFERENCES nifty_trajectory_v1.configurations(id),
+    path_code TEXT COLLATE "C" NOT NULL,
+    PRIMARY KEY (config_id, path_code)
+);
+CREATE TABLE nifty_trajectory_v1.day_patterns (
+    config_id TEXT NOT NULL,
+    trade_date DATE NOT NULL,
+    path_code TEXT COLLATE "C" NOT NULL,
+    pattern JSONB NOT NULL,
+    PRIMARY KEY (config_id, trade_date),
+    FOREIGN KEY (config_id, path_code)
+      REFERENCES nifty_trajectory_v1.clusters(config_id, path_code)
+);
+CREATE INDEX nifty_clusters_prefix_idx
+  ON nifty_trajectory_v1.clusters(config_id, path_code text_pattern_ops);
+CREATE INDEX nifty_days_cluster_date_idx
+  ON nifty_trajectory_v1.day_patterns(config_id, path_code, trade_date);
 ```
+
+The complete JSONB pattern retains symbol, OHLC values, extrema timestamps, tokens, separate close code/final bucket, raw points/legs, magnitude bands, and outcomes at each hourly cutoff. Prices are decimal strings to retain precision. Configurations fingerprint the encoding version, band edges and close tolerance; N is a separate matching/evaluation input. Rebuilding a range replaces only derived rows for that configuration/range.
 
 Query:
 
 ```sql
-SELECT *
-FROM day_pattern
-WHERE symbol = 'NIFTY'
-  AND path_code LIKE :path_prefix_pattern ESCAPE ''
-  AND trade_date < :as_of_date;
+SELECT d.pattern
+FROM nifty_trajectory_v1.clusters c
+JOIN nifty_trajectory_v1.day_patterns d
+  ON d.config_id = c.config_id AND d.path_code = c.path_code
+WHERE c.config_id = :config_id
+  AND (c.path_code = :complete_prefix
+       OR c.path_code LIKE :complete_prefix_with_separator_and_percent ESCAPE '')
+  AND d.trade_date < :as_of_date;
 ```
 
 Notes:
-- `:path_prefix_pattern` is a parameter containing the complete prefix followed by `%`. Use a parameterized query; do not interpolate path codes into SQL.
+- The LIKE parameter contains the complete prefix followed by `|%`; the equality branch handles a complete six-position key. Use parameterized queries, never interpolated path codes. This enforces complete-token boundaries.
 - PostgreSQL's `ESCAPE ''` disables backslash escape handling for `LIKE`, so a prefix containing `\` is treated literally. Verify with `EXPLAIN` that the left-anchored prefix query continues to use the B-tree index. `ILIKE` or a leading `%` will not use that index.
 - In JSON text, a single backslash is serialized as `\\`; normal JSON serialization/deserialization preserves the intended one-character code.
 - A summary table (path prefix → member count, outcome percentiles) can be materialised for instant reads.
+- Source transactions are PostgreSQL READ ONLY. Matching reads use a REPEATABLE READ, READ ONLY snapshot so concurrent project rebuilds cannot change support between counting and fetching members.
 
 ## 9. Validation
 
@@ -275,21 +294,36 @@ Notes:
 - **Success criterion.** Prefix-conditioned outcomes differ meaningfully from the baseline at hours 2–4, and the difference grows as the day progresses.
 - Report hit rate, calibration of P(Up), and percentile coverage per hour.
 
+### 9.1 Verified implementation and trial results
+
+- Automated checks cover encoding, all event symbols, close tolerance, magnitude edges, complete-token backoff, zero/support-shortage results, future-bar/date exclusion, API-key enforcement, JSON serialization, and source/project write boundaries.
+- Live builds from 2020-01-01 through 2026-10-06 produced 1,655 complete sessions and 1,339 unique banded patterns. Fifteen observed incomplete/invalid sessions were excluded with explicit reasons; E days were retained. Existing source tables were queried only.
+- Trial configuration: band edges `[0.25, 0.5, 1, 2]` percentage points and zero-point close tolerance, evaluated at N=5, 10 and 20. These are trial inputs, not API defaults or selected production parameters.
+- April–June 2020 walk-forward evaluation (59 test days) did not show a probability-score advantage over the unconditional baseline for these trials.
+- July–October 2026 evaluation (68 test days), trained only on earlier dates, showed positive Brier-score improvement at hours 2–4 for all three trial support targets. At N=20, improvements were approximately 0.0975, 0.1087 and 0.1044 respectively. Improvements were not monotonic with hour, and performance differs by period; the research success criterion is not established universally.
+- Full JSON results include direction hit rates, P(Up) calibration bins, P10–P90 coverage, and backoff/support metrics in `artifacts/api-server/validation/walk_forward.json` and `artifacts/api-server/validation/full_history_walk_forward.json`.
+- A live literal-backslash prefix lookup returned exactly the expected member count; normal EXPLAIN used an Index Only Scan on the unique-cluster B-tree.
+
+No profitability claim or fixed production configuration follows from these limited evaluations. Up/Down/At-open probabilities use the configured close-tolerance categories.
+
 ## 10. Scope
 
 **In scope (v1):** NIFTY index; one-minute OHLC source data resampled into hourly path buckets; a Python API only (no UI); historical build; hourly prefix matching; magnitude-band coding; JSON output; PostgreSQL storage in new project-owned tables; and walk-forward evaluation.
 
 **Implementation target:** Replace the existing Express/TypeScript API Server artifact with Python rather than create a separate service or project. Preserve `GET /api/healthz` returning `{"status":"ok"}` and leave the image-analysis web artifact unchanged.
 
-**HTTP framework:** FastAPI is approved. HTTP responses are JSON; exact pattern-operation request/response contracts remain to be finalized.
+**HTTP framework:** FastAPI is approved. HTTP request/response contracts are implemented and documented in `/api/docs`, `/api/openapi.json`, and the synchronized shared OpenAPI contract. Errors use a consistent JSON envelope containing `error`, `message`, and `details`, without credential or raw-input echoes.
+
+Approved completion boundary: implement JSON operations for historical build, encoding supplied one-minute bars, developing-day matching, and walk-forward evaluation. Require explicit `band_edges_pct`, `close_tolerance_points`, and, where estimates are requested, `support_target`; there are no guessed numerical defaults. API contracts are documented in `/api/docs` and `/api/openapi.json`. Protect data and build/evaluation operations with an API key; health and contract documentation remain public.
+
+Data quality: exclude incomplete or invalid historical sessions and report dates and reasons; do not fill or fabricate bars. Require 375 unique session minutes for a historical day. A developing-day request requires all minutes through its requested completed bucket, not a complete future session. Ignore out-of-session rows such as 09:14 and ignore future bars when encoding a requested prefix. E alone never excludes a day.
+
+Storage: use only newly created, ownership-marked tables in a dedicated project schema, refusing collisions with unmarked existing objects. Store separate configuration identities so records built with different band edges or close tolerances cannot be mixed.
 
 **Out of scope (v1):** image rendering, DTW, HDBSCAN or K-Means, neural embeddings, ML models, other symbols, order execution.
 
 ## 11. Open questions
 
-1. Tolerance for classifying position 7 as `7C` (close at Open).
-2. Support target N, to be selected after reviewing the historical data and walk-forward results.
-3. Magnitude-band boundaries, labels, and exact placement in path-code tokens.
-4. Whether to introduce time weighting after walk-forward evaluation; no weighting is applied in v1.
-5. Complete one-minute data quality review and agree on handling incomplete or ambiguous sessions for `NIFTY` / `NSE` / `1m` in `public.price_data`.
-6. Exact pattern-operation request/response contracts; FastAPI HTTP JSON transport is approved.
+1. Select preferred numerical configurations after reviewing walk-forward results; these are explicit API inputs, not blockers or implicit defaults.
+2. Whether to introduce time weighting after walk-forward evaluation; no weighting is applied in v1.
+3. Review unusual source-price observations and the provisional E rule with further historical evidence; no source rows are modified or silently corrected.

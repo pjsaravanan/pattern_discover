@@ -6,6 +6,11 @@
  * OpenAPI spec version: 0.1.0
  */
 
-export interface HealthStatus {
-  status: string;
-}
+export type HistoryStatusParams = {
+/**
+ * @minLength 64
+ * @maxLength 64
+ * @pattern ^[0-9a-f]{64}$
+ */
+config_id: string;
+};

@@ -1,0 +1,2010 @@
+{
+  "trial_configuration": {
+    "band_edges_pct": [
+      "0.25",
+      "0.5",
+      "1",
+      "2"
+    ],
+    "close_tolerance_points": "0"
+  },
+  "warning": "Explicit trial values, not API defaults or production recommendations.",
+  "build": {
+    "status": "built",
+    "config_id": "3916dc59ff6d8c20ccf38de4a917cb4bc47a2517b9138f8a56ebfa748efdd4d1",
+    "source": "public.price_data:NIFTY/NSE/1m",
+    "start_date": "2020-01-01",
+    "end_date": "2020-06-30",
+    "source_days": 123,
+    "stored_days": 122,
+    "unique_patterns": 121,
+    "excluded_sessions": [
+      {
+        "trade_date": "2020-02-01",
+        "reason": "incomplete_session",
+        "details": {
+          "required_minutes": 375,
+          "received_minutes": 17,
+          "missing_count": 358,
+          "missing_minute_offsets": [
+            0,
+            1,
+            2,
+            3,
+            4,
+            5,
+            6,
+            7,
+            8,
+            9,
+            10,
+            11,
+            12,
+            13,
+            14,
+            15,
+            16,
+            17,
+            18,
+            19
+          ],
+          "duplicate_minute_offsets": []
+        }
+      }
+    ],
+    "created_project_storage": true
+  },
+  "evaluations": {
+    "5": {
+      "status": "evaluated",
+      "config_id": "3916dc59ff6d8c20ccf38de4a917cb4bc47a2517b9138f8a56ebfa748efdd4d1",
+      "method": "walk_forward_all_prior_dates_only",
+      "support_target": 5,
+      "test_start_date": "2020-04-01",
+      "end_date": "2020-06-30",
+      "per_hour": {
+        "1": {
+          "tested_days": 59,
+          "estimated_days": 59,
+          "insufficient_support_days": 0,
+          "estimate_rate": 1.0,
+          "mean_backoff_positions": 0.6949152542372882,
+          "conditional": {
+            "sample_count": 59,
+            "brier_score": 0.5893014360037642,
+            "direction_hit_rate": 0.5084745762711864,
+            "percentile_coverage_80": {
+              "close_pct": 0.6949152542372882,
+              "remaining_high_pct": 0.711864406779661,
+              "remaining_low_pct": 0.7288135593220338
+            },
+            "up_probability_calibration": [
+              {
+                "bin_low": 0.0,
+                "bin_high": 0.1,
+                "count": 3,
+                "mean_predicted": 0.030303030303030304,
+                "observed_frequency": 1
+              },
+              {
+                "bin_low": 0.1,
+                "bin_high": 0.2,
+                "count": 5,
+                "mean_predicted": 0.146007326007326,
+                "observed_frequency": 0.2
+              },
+              {
+                "bin_low": 0.4,
+                "bin_high": 0.5,
+                "count": 41,
+                "mean_predicted": 0.445656925095268,
+                "observed_frequency": 0.5121951219512195
+              },
+              {
+                "bin_low": 0.6,
+                "bin_high": 0.7,
+                "count": 3,
+                "mean_predicted": 0.6651126651126651,
+                "observed_frequency": 1
+              },
+              {
+                "bin_low": 0.7,
+                "bin_high": 0.8,
+                "count": 2,
+                "mean_predicted": 0.7388888888888889,
+                "observed_frequency": 0
+              },
+              {
+                "bin_low": 0.8,
+                "bin_high": 0.9,
+                "count": 3,
+                "mean_predicted": 0.8551587301587301,
+                "observed_frequency": 0.6666666666666666
+              },
+              {
+                "bin_low": 0.9,
+                "bin_high": 1.0,
+                "count": 2,
+                "mean_predicted": 1.0,
+                "observed_frequency": 0.5
+              }
+            ]
+          },
+          "baseline_on_same_days": {
+            "sample_count": 59,
+            "brier_score": 0.5141103722342854,
+            "direction_hit_rate": 0.4745762711864407,
+            "percentile_coverage_80": {
+              "close_pct": 0.8135593220338984,
+              "remaining_high_pct": 0.8135593220338984,
+              "remaining_low_pct": 0.864406779661017
+            },
+            "up_probability_calibration": [
+              {
+                "bin_low": 0.4,
+                "bin_high": 0.5,
+                "count": 59,
+                "mean_predicted": 0.4472937870779287,
+                "observed_frequency": 0.5254237288135594
+              }
+            ]
+          },
+          "baseline_all_test_days": {
+            "sample_count": 59,
+            "brier_score": 0.5141103722342854,
+            "direction_hit_rate": 0.4745762711864407,
+            "percentile_coverage_80": {
+              "close_pct": 0.8135593220338984,
+              "remaining_high_pct": 0.8135593220338984,
+              "remaining_low_pct": 0.864406779661017
+            },
+            "up_probability_calibration": [
+              {
+                "bin_low": 0.4,
+                "bin_high": 0.5,
+                "count": 59,
+                "mean_predicted": 0.4472937870779287,
+                "observed_frequency": 0.5254237288135594
+              }
+            ]
+          },
+          "brier_improvement_vs_baseline": -0.07519106376947882
+        },
+        "2": {
+          "tested_days": 59,
+          "estimated_days": 59,
+          "insufficient_support_days": 0,
+          "estimate_rate": 1.0,
+          "mean_backoff_positions": 1.6779661016949152,
+          "conditional": {
+            "sample_count": 59,
+            "brier_score": 0.5982948638833906,
+            "direction_hit_rate": 0.5084745762711864,
+            "percentile_coverage_80": {
+              "close_pct": 0.6779661016949152,
+              "remaining_high_pct": 0.6440677966101694,
+              "remaining_low_pct": 0.6779661016949152
+            },
+            "up_probability_calibration": [
+              {
+                "bin_low": 0.0,
+                "bin_high": 0.1,
+                "count": 4,
+                "mean_predicted": 0.022727272727272728,
+                "observed_frequency": 1
+              },
+              {
+                "bin_low": 0.1,
+                "bin_high": 0.2,
+                "count": 4,
+                "mean_predicted": 0.1467948717948718,
+                "observed_frequency": 0
+              },
+              {
+                "bin_low": 0.4,
+                "bin_high": 0.5,
+                "count": 41,
+                "mean_predicted": 0.445656925095268,
+                "observed_frequency": 0.5121951219512195
+              },
+              {
+                "bin_low": 0.6,
+                "bin_high": 0.7,
+                "count": 3,
+                "mean_predicted": 0.6651126651126651,
+                "observed_frequency": 1
+              },
+              {
+                "bin_low": 0.7,
+                "bin_high": 0.8,
+                "count": 2,
+                "mean_predicted": 0.7388888888888889,
+                "observed_frequency": 0
+              },
+              {
+                "bin_low": 0.8,
+                "bin_high": 0.9,
+                "count": 3,
+                "mean_predicted": 0.8551587301587301,
+                "observed_frequency": 0.6666666666666666
+              },
+              {
+                "bin_low": 0.9,
+                "bin_high": 1.0,
+                "count": 2,
+                "mean_predicted": 1.0,
+                "observed_frequency": 0.5
+              }
+            ]
+          },
+          "baseline_on_same_days": {
+            "sample_count": 59,
+            "brier_score": 0.5141103722342854,
+            "direction_hit_rate": 0.4745762711864407,
+            "percentile_coverage_80": {
+              "close_pct": 0.8135593220338984,
+              "remaining_high_pct": 0.7796610169491526,
+              "remaining_low_pct": 0.8305084745762712
+            },
+            "up_probability_calibration": [
+              {
+                "bin_low": 0.4,
+                "bin_high": 0.5,
+                "count": 59,
+                "mean_predicted": 0.4472937870779287,
+                "observed_frequency": 0.5254237288135594
+              }
+            ]
+          },
+          "baseline_all_test_days": {
+            "sample_count": 59,
+            "brier_score": 0.5141103722342854,
+            "direction_hit_rate": 0.4745762711864407,
+            "percentile_coverage_80": {
+              "close_pct": 0.8135593220338984,
+              "remaining_high_pct": 0.7796610169491526,
+              "remaining_low_pct": 0.8305084745762712
+            },
+            "up_probability_calibration": [
+              {
+                "bin_low": 0.4,
+                "bin_high": 0.5,
+                "count": 59,
+                "mean_predicted": 0.4472937870779287,
+                "observed_frequency": 0.5254237288135594
+              }
+            ]
+          },
+          "brier_improvement_vs_baseline": -0.08418449164910524
+        },
+        "3": {
+          "tested_days": 59,
+          "estimated_days": 59,
+          "insufficient_support_days": 0,
+          "estimate_rate": 1.0,
+          "mean_backoff_positions": 2.6779661016949152,
+          "conditional": {
+            "sample_count": 59,
+            "brier_score": 0.5982948638833906,
+            "direction_hit_rate": 0.5084745762711864,
+            "percentile_coverage_80": {
+              "close_pct": 0.6779661016949152,
+              "remaining_high_pct": 0.6610169491525424,
+              "remaining_low_pct": 0.711864406779661
+            },
+            "up_probability_calibration": [
+              {
+                "bin_low": 0.0,
+                "bin_high": 0.1,
+                "count": 4,
+                "mean_predicted": 0.022727272727272728,
+                "observed_frequency": 1
+              },
+              {
+                "bin_low": 0.1,
+                "bin_high": 0.2,
+                "count": 4,
+                "mean_predicted": 0.1467948717948718,
+                "observed_frequency": 0
+              },
+              {
+                "bin_low": 0.4,
+                "bin_high": 0.5,
+                "count": 41,
+                "mean_predicted": 0.445656925095268,
+                "observed_frequency": 0.5121951219512195
+              },
+              {
+                "bin_low": 0.6,
+                "bin_high": 0.7,
+                "count": 3,
+                "mean_predicted": 0.6651126651126651,
+                "observed_frequency": 1
+              },
+              {
+                "bin_low": 0.7,
+                "bin_high": 0.8,
+                "count": 2,
+                "mean_predicted": 0.7388888888888889,
+                "observed_frequency": 0
+              },
+              {
+                "bin_low": 0.8,
+                "bin_high": 0.9,
+                "count": 3,
+                "mean_predicted": 0.8551587301587301,
+                "observed_frequency": 0.6666666666666666
+              },
+              {
+                "bin_low": 0.9,
+                "bin_high": 1.0,
+                "count": 2,
+                "mean_predicted": 1.0,
+                "observed_frequency": 0.5
+              }
+            ]
+          },
+          "baseline_on_same_days": {
+            "sample_count": 59,
+            "brier_score": 0.5141103722342854,
+            "direction_hit_rate": 0.4745762711864407,
+            "percentile_coverage_80": {
+              "close_pct": 0.8135593220338984,
+              "remaining_high_pct": 0.7796610169491526,
+              "remaining_low_pct": 0.864406779661017
+            },
+            "up_probability_calibration": [
+              {
+                "bin_low": 0.4,
+                "bin_high": 0.5,
+                "count": 59,
+                "mean_predicted": 0.4472937870779287,
+                "observed_frequency": 0.5254237288135594
+              }
+            ]
+          },
+          "baseline_all_test_days": {
+            "sample_count": 59,
+            "brier_score": 0.5141103722342854,
+            "direction_hit_rate": 0.4745762711864407,
+            "percentile_coverage_80": {
+              "close_pct": 0.8135593220338984,
+              "remaining_high_pct": 0.7796610169491526,
+              "remaining_low_pct": 0.864406779661017
+            },
+            "up_probability_calibration": [
+              {
+                "bin_low": 0.4,
+                "bin_high": 0.5,
+                "count": 59,
+                "mean_predicted": 0.4472937870779287,
+                "observed_frequency": 0.5254237288135594
+              }
+            ]
+          },
+          "brier_improvement_vs_baseline": -0.08418449164910524
+        },
+        "4": {
+          "tested_days": 59,
+          "estimated_days": 59,
+          "insufficient_support_days": 0,
+          "estimate_rate": 1.0,
+          "mean_backoff_positions": 3.6779661016949152,
+          "conditional": {
+            "sample_count": 59,
+            "brier_score": 0.5982948638833906,
+            "direction_hit_rate": 0.5084745762711864,
+            "percentile_coverage_80": {
+              "close_pct": 0.6779661016949152,
+              "remaining_high_pct": 0.6610169491525424,
+              "remaining_low_pct": 0.711864406779661
+            },
+            "up_probability_calibration": [
+              {
+                "bin_low": 0.0,
+                "bin_high": 0.1,
+                "count": 4,
+                "mean_predicted": 0.022727272727272728,
+                "observed_frequency": 1
+              },
+              {
+                "bin_low": 0.1,
+                "bin_high": 0.2,
+                "count": 4,
+                "mean_predicted": 0.1467948717948718,
+                "observed_frequency": 0
+              },
+              {
+                "bin_low": 0.4,
+                "bin_high": 0.5,
+                "count": 41,
+                "mean_predicted": 0.445656925095268,
+                "observed_frequency": 0.5121951219512195
+              },
+              {
+                "bin_low": 0.6,
+                "bin_high": 0.7,
+                "count": 3,
+                "mean_predicted": 0.6651126651126651,
+                "observed_frequency": 1
+              },
+              {
+                "bin_low": 0.7,
+                "bin_high": 0.8,
+                "count": 2,
+                "mean_predicted": 0.7388888888888889,
+                "observed_frequency": 0
+              },
+              {
+                "bin_low": 0.8,
+                "bin_high": 0.9,
+                "count": 3,
+                "mean_predicted": 0.8551587301587301,
+                "observed_frequency": 0.6666666666666666
+              },
+              {
+                "bin_low": 0.9,
+                "bin_high": 1.0,
+                "count": 2,
+                "mean_predicted": 1.0,
+                "observed_frequency": 0.5
+              }
+            ]
+          },
+          "baseline_on_same_days": {
+            "sample_count": 59,
+            "brier_score": 0.5141103722342854,
+            "direction_hit_rate": 0.4745762711864407,
+            "percentile_coverage_80": {
+              "close_pct": 0.8135593220338984,
+              "remaining_high_pct": 0.7796610169491526,
+              "remaining_low_pct": 0.847457627118644
+            },
+            "up_probability_calibration": [
+              {
+                "bin_low": 0.4,
+                "bin_high": 0.5,
+                "count": 59,
+                "mean_predicted": 0.4472937870779287,
+                "observed_frequency": 0.5254237288135594
+              }
+            ]
+          },
+          "baseline_all_test_days": {
+            "sample_count": 59,
+            "brier_score": 0.5141103722342854,
+            "direction_hit_rate": 0.4745762711864407,
+            "percentile_coverage_80": {
+              "close_pct": 0.8135593220338984,
+              "remaining_high_pct": 0.7796610169491526,
+              "remaining_low_pct": 0.847457627118644
+            },
+            "up_probability_calibration": [
+              {
+                "bin_low": 0.4,
+                "bin_high": 0.5,
+                "count": 59,
+                "mean_predicted": 0.4472937870779287,
+                "observed_frequency": 0.5254237288135594
+              }
+            ]
+          },
+          "brier_improvement_vs_baseline": -0.08418449164910524
+        },
+        "5": {
+          "tested_days": 59,
+          "estimated_days": 59,
+          "insufficient_support_days": 0,
+          "estimate_rate": 1.0,
+          "mean_backoff_positions": 4.677966101694915,
+          "conditional": {
+            "sample_count": 59,
+            "brier_score": 0.5982948638833906,
+            "direction_hit_rate": 0.5084745762711864,
+            "percentile_coverage_80": {
+              "close_pct": 0.6779661016949152,
+              "remaining_high_pct": 0.6271186440677966,
+              "remaining_low_pct": 0.6949152542372882
+            },
+            "up_probability_calibration": [
+              {
+                "bin_low": 0.0,
+                "bin_high": 0.1,
+                "count": 4,
+                "mean_predicted": 0.022727272727272728,
+                "observed_frequency": 1
+              },
+              {
+                "bin_low": 0.1,
+                "bin_high": 0.2,
+                "count": 4,
+                "mean_predicted": 0.1467948717948718,
+                "observed_frequency": 0
+              },
+              {
+                "bin_low": 0.4,
+                "bin_high": 0.5,
+                "count": 41,
+                "mean_predicted": 0.445656925095268,
+                "observed_frequency": 0.5121951219512195
+              },
+              {
+                "bin_low": 0.6,
+                "bin_high": 0.7,
+                "count": 3,
+                "mean_predicted": 0.6651126651126651,
+                "observed_frequency": 1
+              },
+              {
+                "bin_low": 0.7,
+                "bin_high": 0.8,
+                "count": 2,
+                "mean_predicted": 0.7388888888888889,
+                "observed_frequency": 0
+              },
+              {
+                "bin_low": 0.8,
+                "bin_high": 0.9,
+                "count": 3,
+                "mean_predicted": 0.8551587301587301,
+                "observed_frequency": 0.6666666666666666
+              },
+              {
+                "bin_low": 0.9,
+                "bin_high": 1.0,
+                "count": 2,
+                "mean_predicted": 1.0,
+                "observed_frequency": 0.5
+              }
+            ]
+          },
+          "baseline_on_same_days": {
+            "sample_count": 59,
+            "brier_score": 0.5141103722342854,
+            "direction_hit_rate": 0.4745762711864407,
+            "percentile_coverage_80": {
+              "close_pct": 0.8135593220338984,
+              "remaining_high_pct": 0.7627118644067796,
+              "remaining_low_pct": 0.8135593220338984
+            },
+            "up_probability_calibration": [
+              {
+                "bin_low": 0.4,
+                "bin_high": 0.5,
+                "count": 59,
+                "mean_predicted": 0.4472937870779287,
+                "observed_frequency": 0.5254237288135594
+              }
+            ]
+          },
+          "baseline_all_test_days": {
+            "sample_count": 59,
+            "brier_score": 0.5141103722342854,
+            "direction_hit_rate": 0.4745762711864407,
+            "percentile_coverage_80": {
+              "close_pct": 0.8135593220338984,
+              "remaining_high_pct": 0.7627118644067796,
+              "remaining_low_pct": 0.8135593220338984
+            },
+            "up_probability_calibration": [
+              {
+                "bin_low": 0.4,
+                "bin_high": 0.5,
+                "count": 59,
+                "mean_predicted": 0.4472937870779287,
+                "observed_frequency": 0.5254237288135594
+              }
+            ]
+          },
+          "brier_improvement_vs_baseline": -0.08418449164910524
+        },
+        "6": {
+          "tested_days": 59,
+          "estimated_days": 59,
+          "insufficient_support_days": 0,
+          "estimate_rate": 1.0,
+          "mean_backoff_positions": 5.677966101694915,
+          "conditional": {
+            "sample_count": 59,
+            "brier_score": 0.5982948638833906,
+            "direction_hit_rate": 0.5084745762711864,
+            "percentile_coverage_80": {
+              "close_pct": 0.6779661016949152,
+              "remaining_high_pct": 0.6610169491525424,
+              "remaining_low_pct": 0.6610169491525424
+            },
+            "up_probability_calibration": [
+              {
+                "bin_low": 0.0,
+                "bin_high": 0.1,
+                "count": 4,
+                "mean_predicted": 0.022727272727272728,
+                "observed_frequency": 1
+              },
+              {
+                "bin_low": 0.1,
+                "bin_high": 0.2,
+                "count": 4,
+                "mean_predicted": 0.1467948717948718,
+                "observed_frequency": 0
+              },
+              {
+                "bin_low": 0.4,
+                "bin_high": 0.5,
+                "count": 41,
+                "mean_predicted": 0.445656925095268,
+                "observed_frequency": 0.5121951219512195
+              },
+              {
+                "bin_low": 0.6,
+                "bin_high": 0.7,
+                "count": 3,
+                "mean_predicted": 0.6651126651126651,
+                "observed_frequency": 1
+              },
+              {
+                "bin_low": 0.7,
+                "bin_high": 0.8,
+                "count": 2,
+                "mean_predicted": 0.7388888888888889,
+                "observed_frequency": 0
+              },
+              {
+                "bin_low": 0.8,
+                "bin_high": 0.9,
+                "count": 3,
+                "mean_predicted": 0.8551587301587301,
+                "observed_frequency": 0.6666666666666666
+              },
+              {
+                "bin_low": 0.9,
+                "bin_high": 1.0,
+                "count": 2,
+                "mean_predicted": 1.0,
+                "observed_frequency": 0.5
+              }
+            ]
+          },
+          "baseline_on_same_days": {
+            "sample_count": 59,
+            "brier_score": 0.5141103722342854,
+            "direction_hit_rate": 0.4745762711864407,
+            "percentile_coverage_80": {
+              "close_pct": 0.8135593220338984,
+              "remaining_high_pct": 0.7966101694915254,
+              "remaining_low_pct": 0.8135593220338984
+            },
+            "up_probability_calibration": [
+              {
+                "bin_low": 0.4,
+                "bin_high": 0.5,
+                "count": 59,
+                "mean_predicted": 0.4472937870779287,
+                "observed_frequency": 0.5254237288135594
+              }
+            ]
+          },
+          "baseline_all_test_days": {
+            "sample_count": 59,
+            "brier_score": 0.5141103722342854,
+            "direction_hit_rate": 0.4745762711864407,
+            "percentile_coverage_80": {
+              "close_pct": 0.8135593220338984,
+              "remaining_high_pct": 0.7966101694915254,
+              "remaining_low_pct": 0.8135593220338984
+            },
+            "up_probability_calibration": [
+              {
+                "bin_low": 0.4,
+                "bin_high": 0.5,
+                "count": 59,
+                "mean_predicted": 0.4472937870779287,
+                "observed_frequency": 0.5254237288135594
+              }
+            ]
+          },
+          "brier_improvement_vs_baseline": -0.08418449164910524
+        }
+      },
+      "interpretation": "Positive Brier improvement is better than baseline. Measurements do not establish trading profitability."
+    },
+    "10": {
+      "status": "evaluated",
+      "config_id": "3916dc59ff6d8c20ccf38de4a917cb4bc47a2517b9138f8a56ebfa748efdd4d1",
+      "method": "walk_forward_all_prior_dates_only",
+      "support_target": 10,
+      "test_start_date": "2020-04-01",
+      "end_date": "2020-06-30",
+      "per_hour": {
+        "1": {
+          "tested_days": 59,
+          "estimated_days": 59,
+          "insufficient_support_days": 0,
+          "estimate_rate": 1.0,
+          "mean_backoff_positions": 0.847457627118644,
+          "conditional": {
+            "sample_count": 59,
+            "brier_score": 0.5195073519845222,
+            "direction_hit_rate": 0.5084745762711864,
+            "percentile_coverage_80": {
+              "close_pct": 0.7796610169491526,
+              "remaining_high_pct": 0.8135593220338984,
+              "remaining_low_pct": 0.7966101694915254
+            },
+            "up_probability_calibration": [
+              {
+                "bin_low": 0.0,
+                "bin_high": 0.1,
+                "count": 1,
+                "mean_predicted": 0.09090909090909091,
+                "observed_frequency": 1
+              },
+              {
+                "bin_low": 0.1,
+                "bin_high": 0.2,
+                "count": 4,
+                "mean_predicted": 0.14084249084249084,
+                "observed_frequency": 0.25
+              },
+              {
+                "bin_low": 0.4,
+                "bin_high": 0.5,
+                "count": 50,
+                "mean_predicted": 0.44592066424030213,
+                "observed_frequency": 0.52
+              },
+              {
+                "bin_low": 0.6,
+                "bin_high": 0.7,
+                "count": 3,
+                "mean_predicted": 0.6651126651126651,
+                "observed_frequency": 1
+              },
+              {
+                "bin_low": 0.7,
+                "bin_high": 0.8,
+                "count": 1,
+                "mean_predicted": 0.7,
+                "observed_frequency": 0
+              }
+            ]
+          },
+          "baseline_on_same_days": {
+            "sample_count": 59,
+            "brier_score": 0.5141103722342854,
+            "direction_hit_rate": 0.4745762711864407,
+            "percentile_coverage_80": {
+              "close_pct": 0.8135593220338984,
+              "remaining_high_pct": 0.8135593220338984,
+              "remaining_low_pct": 0.864406779661017
+            },
+            "up_probability_calibration": [
+              {
+                "bin_low": 0.4,
+                "bin_high": 0.5,
+                "count": 59,
+                "mean_predicted": 0.4472937870779287,
+                "observed_frequency": 0.5254237288135594
+              }
+            ]
+          },
+          "baseline_all_test_days": {
+            "sample_count": 59,
+            "brier_score": 0.5141103722342854,
+            "direction_hit_rate": 0.4745762711864407,
+            "percentile_coverage_80": {
+              "close_pct": 0.8135593220338984,
+              "remaining_high_pct": 0.8135593220338984,
+              "remaining_low_pct": 0.864406779661017
+            },
+            "up_probability_calibration": [
+              {
+                "bin_low": 0.4,
+                "bin_high": 0.5,
+                "count": 59,
+                "mean_predicted": 0.4472937870779287,
+                "observed_frequency": 0.5254237288135594
+              }
+            ]
+          },
+          "brier_improvement_vs_baseline": -0.005396979750236897
+        },
+        "2": {
+          "tested_days": 59,
+          "estimated_days": 59,
+          "insufficient_support_days": 0,
+          "estimate_rate": 1.0,
+          "mean_backoff_positions": 1.847457627118644,
+          "conditional": {
+            "sample_count": 59,
+            "brier_score": 0.5195073519845222,
+            "direction_hit_rate": 0.5084745762711864,
+            "percentile_coverage_80": {
+              "close_pct": 0.7796610169491526,
+              "remaining_high_pct": 0.7627118644067796,
+              "remaining_low_pct": 0.7627118644067796
+            },
+            "up_probability_calibration": [
+              {
+                "bin_low": 0.0,
+                "bin_high": 0.1,
+                "count": 1,
+                "mean_predicted": 0.09090909090909091,
+                "observed_frequency": 1
+              },
+              {
+                "bin_low": 0.1,
+                "bin_high": 0.2,
+                "count": 4,
+                "mean_predicted": 0.14084249084249084,
+                "observed_frequency": 0.25
+              },
+              {
+                "bin_low": 0.4,
+                "bin_high": 0.5,
+                "count": 50,
+                "mean_predicted": 0.44592066424030213,
+                "observed_frequency": 0.52
+              },
+              {
+                "bin_low": 0.6,
+                "bin_high": 0.7,
+                "count": 3,
+                "mean_predicted": 0.6651126651126651,
+                "observed_frequency": 1
+              },
+              {
+                "bin_low": 0.7,
+                "bin_high": 0.8,
+                "count": 1,
+                "mean_predicted": 0.7,
+                "observed_frequency": 0
+              }
+            ]
+          },
+          "baseline_on_same_days": {
+            "sample_count": 59,
+            "brier_score": 0.5141103722342854,
+            "direction_hit_rate": 0.4745762711864407,
+            "percentile_coverage_80": {
+              "close_pct": 0.8135593220338984,
+              "remaining_high_pct": 0.7796610169491526,
+              "remaining_low_pct": 0.8305084745762712
+            },
+            "up_probability_calibration": [
+              {
+                "bin_low": 0.4,
+                "bin_high": 0.5,
+                "count": 59,
+                "mean_predicted": 0.4472937870779287,
+                "observed_frequency": 0.5254237288135594
+              }
+            ]
+          },
+          "baseline_all_test_days": {
+            "sample_count": 59,
+            "brier_score": 0.5141103722342854,
+            "direction_hit_rate": 0.4745762711864407,
+            "percentile_coverage_80": {
+              "close_pct": 0.8135593220338984,
+              "remaining_high_pct": 0.7796610169491526,
+              "remaining_low_pct": 0.8305084745762712
+            },
+            "up_probability_calibration": [
+              {
+                "bin_low": 0.4,
+                "bin_high": 0.5,
+                "count": 59,
+                "mean_predicted": 0.4472937870779287,
+                "observed_frequency": 0.5254237288135594
+              }
+            ]
+          },
+          "brier_improvement_vs_baseline": -0.005396979750236897
+        },
+        "3": {
+          "tested_days": 59,
+          "estimated_days": 59,
+          "insufficient_support_days": 0,
+          "estimate_rate": 1.0,
+          "mean_backoff_positions": 2.847457627118644,
+          "conditional": {
+            "sample_count": 59,
+            "brier_score": 0.5195073519845222,
+            "direction_hit_rate": 0.5084745762711864,
+            "percentile_coverage_80": {
+              "close_pct": 0.7796610169491526,
+              "remaining_high_pct": 0.7796610169491526,
+              "remaining_low_pct": 0.8135593220338984
+            },
+            "up_probability_calibration": [
+              {
+                "bin_low": 0.0,
+                "bin_high": 0.1,
+                "count": 1,
+                "mean_predicted": 0.09090909090909091,
+                "observed_frequency": 1
+              },
+              {
+                "bin_low": 0.1,
+                "bin_high": 0.2,
+                "count": 4,
+                "mean_predicted": 0.14084249084249084,
+                "observed_frequency": 0.25
+              },
+              {
+                "bin_low": 0.4,
+                "bin_high": 0.5,
+                "count": 50,
+                "mean_predicted": 0.44592066424030213,
+                "observed_frequency": 0.52
+              },
+              {
+                "bin_low": 0.6,
+                "bin_high": 0.7,
+                "count": 3,
+                "mean_predicted": 0.6651126651126651,
+                "observed_frequency": 1
+              },
+              {
+                "bin_low": 0.7,
+                "bin_high": 0.8,
+                "count": 1,
+                "mean_predicted": 0.7,
+                "observed_frequency": 0
+              }
+            ]
+          },
+          "baseline_on_same_days": {
+            "sample_count": 59,
+            "brier_score": 0.5141103722342854,
+            "direction_hit_rate": 0.4745762711864407,
+            "percentile_coverage_80": {
+              "close_pct": 0.8135593220338984,
+              "remaining_high_pct": 0.7796610169491526,
+              "remaining_low_pct": 0.864406779661017
+            },
+            "up_probability_calibration": [
+              {
+                "bin_low": 0.4,
+                "bin_high": 0.5,
+                "count": 59,
+                "mean_predicted": 0.4472937870779287,
+                "observed_frequency": 0.5254237288135594
+              }
+            ]
+          },
+          "baseline_all_test_days": {
+            "sample_count": 59,
+            "brier_score": 0.5141103722342854,
+            "direction_hit_rate": 0.4745762711864407,
+            "percentile_coverage_80": {
+              "close_pct": 0.8135593220338984,
+              "remaining_high_pct": 0.7796610169491526,
+              "remaining_low_pct": 0.864406779661017
+            },
+            "up_probability_calibration": [
+              {
+                "bin_low": 0.4,
+                "bin_high": 0.5,
+                "count": 59,
+                "mean_predicted": 0.4472937870779287,
+                "observed_frequency": 0.5254237288135594
+              }
+            ]
+          },
+          "brier_improvement_vs_baseline": -0.005396979750236897
+        },
+        "4": {
+          "tested_days": 59,
+          "estimated_days": 59,
+          "insufficient_support_days": 0,
+          "estimate_rate": 1.0,
+          "mean_backoff_positions": 3.847457627118644,
+          "conditional": {
+            "sample_count": 59,
+            "brier_score": 0.5195073519845222,
+            "direction_hit_rate": 0.5084745762711864,
+            "percentile_coverage_80": {
+              "close_pct": 0.7796610169491526,
+              "remaining_high_pct": 0.7457627118644068,
+              "remaining_low_pct": 0.8135593220338984
+            },
+            "up_probability_calibration": [
+              {
+                "bin_low": 0.0,
+                "bin_high": 0.1,
+                "count": 1,
+                "mean_predicted": 0.09090909090909091,
+                "observed_frequency": 1
+              },
+              {
+                "bin_low": 0.1,
+                "bin_high": 0.2,
+                "count": 4,
+                "mean_predicted": 0.14084249084249084,
+                "observed_frequency": 0.25
+              },
+              {
+                "bin_low": 0.4,
+                "bin_high": 0.5,
+                "count": 50,
+                "mean_predicted": 0.44592066424030213,
+                "observed_frequency": 0.52
+              },
+              {
+                "bin_low": 0.6,
+                "bin_high": 0.7,
+                "count": 3,
+                "mean_predicted": 0.6651126651126651,
+                "observed_frequency": 1
+              },
+              {
+                "bin_low": 0.7,
+                "bin_high": 0.8,
+                "count": 1,
+                "mean_predicted": 0.7,
+                "observed_frequency": 0
+              }
+            ]
+          },
+          "baseline_on_same_days": {
+            "sample_count": 59,
+            "brier_score": 0.5141103722342854,
+            "direction_hit_rate": 0.4745762711864407,
+            "percentile_coverage_80": {
+              "close_pct": 0.8135593220338984,
+              "remaining_high_pct": 0.7796610169491526,
+              "remaining_low_pct": 0.847457627118644
+            },
+            "up_probability_calibration": [
+              {
+                "bin_low": 0.4,
+                "bin_high": 0.5,
+                "count": 59,
+                "mean_predicted": 0.4472937870779287,
+                "observed_frequency": 0.5254237288135594
+              }
+            ]
+          },
+          "baseline_all_test_days": {
+            "sample_count": 59,
+            "brier_score": 0.5141103722342854,
+            "direction_hit_rate": 0.4745762711864407,
+            "percentile_coverage_80": {
+              "close_pct": 0.8135593220338984,
+              "remaining_high_pct": 0.7796610169491526,
+              "remaining_low_pct": 0.847457627118644
+            },
+            "up_probability_calibration": [
+              {
+                "bin_low": 0.4,
+                "bin_high": 0.5,
+                "count": 59,
+                "mean_predicted": 0.4472937870779287,
+                "observed_frequency": 0.5254237288135594
+              }
+            ]
+          },
+          "brier_improvement_vs_baseline": -0.005396979750236897
+        },
+        "5": {
+          "tested_days": 59,
+          "estimated_days": 59,
+          "insufficient_support_days": 0,
+          "estimate_rate": 1.0,
+          "mean_backoff_positions": 4.8474576271186445,
+          "conditional": {
+            "sample_count": 59,
+            "brier_score": 0.5195073519845222,
+            "direction_hit_rate": 0.5084745762711864,
+            "percentile_coverage_80": {
+              "close_pct": 0.7796610169491526,
+              "remaining_high_pct": 0.711864406779661,
+              "remaining_low_pct": 0.7796610169491526
+            },
+            "up_probability_calibration": [
+              {
+                "bin_low": 0.0,
+                "bin_high": 0.1,
+                "count": 1,
+                "mean_predicted": 0.09090909090909091,
+                "observed_frequency": 1
+              },
+              {
+                "bin_low": 0.1,
+                "bin_high": 0.2,
+                "count": 4,
+                "mean_predicted": 0.14084249084249084,
+                "observed_frequency": 0.25
+              },
+              {
+                "bin_low": 0.4,
+                "bin_high": 0.5,
+                "count": 50,
+                "mean_predicted": 0.44592066424030213,
+                "observed_frequency": 0.52
+              },
+              {
+                "bin_low": 0.6,
+                "bin_high": 0.7,
+                "count": 3,
+                "mean_predicted": 0.6651126651126651,
+                "observed_frequency": 1
+              },
+              {
+                "bin_low": 0.7,
+                "bin_high": 0.8,
+                "count": 1,
+                "mean_predicted": 0.7,
+                "observed_frequency": 0
+              }
+            ]
+          },
+          "baseline_on_same_days": {
+            "sample_count": 59,
+            "brier_score": 0.5141103722342854,
+            "direction_hit_rate": 0.4745762711864407,
+            "percentile_coverage_80": {
+              "close_pct": 0.8135593220338984,
+              "remaining_high_pct": 0.7627118644067796,
+              "remaining_low_pct": 0.8135593220338984
+            },
+            "up_probability_calibration": [
+              {
+                "bin_low": 0.4,
+                "bin_high": 0.5,
+                "count": 59,
+                "mean_predicted": 0.4472937870779287,
+                "observed_frequency": 0.5254237288135594
+              }
+            ]
+          },
+          "baseline_all_test_days": {
+            "sample_count": 59,
+            "brier_score": 0.5141103722342854,
+            "direction_hit_rate": 0.4745762711864407,
+            "percentile_coverage_80": {
+              "close_pct": 0.8135593220338984,
+              "remaining_high_pct": 0.7627118644067796,
+              "remaining_low_pct": 0.8135593220338984
+            },
+            "up_probability_calibration": [
+              {
+                "bin_low": 0.4,
+                "bin_high": 0.5,
+                "count": 59,
+                "mean_predicted": 0.4472937870779287,
+                "observed_frequency": 0.5254237288135594
+              }
+            ]
+          },
+          "brier_improvement_vs_baseline": -0.005396979750236897
+        },
+        "6": {
+          "tested_days": 59,
+          "estimated_days": 59,
+          "insufficient_support_days": 0,
+          "estimate_rate": 1.0,
+          "mean_backoff_positions": 5.8474576271186445,
+          "conditional": {
+            "sample_count": 59,
+            "brier_score": 0.5195073519845222,
+            "direction_hit_rate": 0.5084745762711864,
+            "percentile_coverage_80": {
+              "close_pct": 0.7796610169491526,
+              "remaining_high_pct": 0.7627118644067796,
+              "remaining_low_pct": 0.7796610169491526
+            },
+            "up_probability_calibration": [
+              {
+                "bin_low": 0.0,
+                "bin_high": 0.1,
+                "count": 1,
+                "mean_predicted": 0.09090909090909091,
+                "observed_frequency": 1
+              },
+              {
+                "bin_low": 0.1,
+                "bin_high": 0.2,
+                "count": 4,
+                "mean_predicted": 0.14084249084249084,
+                "observed_frequency": 0.25
+              },
+              {
+                "bin_low": 0.4,
+                "bin_high": 0.5,
+                "count": 50,
+                "mean_predicted": 0.44592066424030213,
+                "observed_frequency": 0.52
+              },
+              {
+                "bin_low": 0.6,
+                "bin_high": 0.7,
+                "count": 3,
+                "mean_predicted": 0.6651126651126651,
+                "observed_frequency": 1
+              },
+              {
+                "bin_low": 0.7,
+                "bin_high": 0.8,
+                "count": 1,
+                "mean_predicted": 0.7,
+                "observed_frequency": 0
+              }
+            ]
+          },
+          "baseline_on_same_days": {
+            "sample_count": 59,
+            "brier_score": 0.5141103722342854,
+            "direction_hit_rate": 0.4745762711864407,
+            "percentile_coverage_80": {
+              "close_pct": 0.8135593220338984,
+              "remaining_high_pct": 0.7966101694915254,
+              "remaining_low_pct": 0.8135593220338984
+            },
+            "up_probability_calibration": [
+              {
+                "bin_low": 0.4,
+                "bin_high": 0.5,
+                "count": 59,
+                "mean_predicted": 0.4472937870779287,
+                "observed_frequency": 0.5254237288135594
+              }
+            ]
+          },
+          "baseline_all_test_days": {
+            "sample_count": 59,
+            "brier_score": 0.5141103722342854,
+            "direction_hit_rate": 0.4745762711864407,
+            "percentile_coverage_80": {
+              "close_pct": 0.8135593220338984,
+              "remaining_high_pct": 0.7966101694915254,
+              "remaining_low_pct": 0.8135593220338984
+            },
+            "up_probability_calibration": [
+              {
+                "bin_low": 0.4,
+                "bin_high": 0.5,
+                "count": 59,
+                "mean_predicted": 0.4472937870779287,
+                "observed_frequency": 0.5254237288135594
+              }
+            ]
+          },
+          "brier_improvement_vs_baseline": -0.005396979750236897
+        }
+      },
+      "interpretation": "Positive Brier improvement is better than baseline. Measurements do not establish trading profitability."
+    },
+    "20": {
+      "status": "evaluated",
+      "config_id": "3916dc59ff6d8c20ccf38de4a917cb4bc47a2517b9138f8a56ebfa748efdd4d1",
+      "method": "walk_forward_all_prior_dates_only",
+      "support_target": 20,
+      "test_start_date": "2020-04-01",
+      "end_date": "2020-06-30",
+      "per_hour": {
+        "1": {
+          "tested_days": 59,
+          "estimated_days": 59,
+          "insufficient_support_days": 0,
+          "estimate_rate": 1.0,
+          "mean_backoff_positions": 1,
+          "conditional": {
+            "sample_count": 59,
+            "brier_score": 0.5141103722342854,
+            "direction_hit_rate": 0.4745762711864407,
+            "percentile_coverage_80": {
+              "close_pct": 0.8135593220338984,
+              "remaining_high_pct": 0.8135593220338984,
+              "remaining_low_pct": 0.864406779661017
+            },
+            "up_probability_calibration": [
+              {
+                "bin_low": 0.4,
+                "bin_high": 0.5,
+                "count": 59,
+                "mean_predicted": 0.4472937870779287,
+                "observed_frequency": 0.5254237288135594
+              }
+            ]
+          },
+          "baseline_on_same_days": {
+            "sample_count": 59,
+            "brier_score": 0.5141103722342854,
+            "direction_hit_rate": 0.4745762711864407,
+            "percentile_coverage_80": {
+              "close_pct": 0.8135593220338984,
+              "remaining_high_pct": 0.8135593220338984,
+              "remaining_low_pct": 0.864406779661017
+            },
+            "up_probability_calibration": [
+              {
+                "bin_low": 0.4,
+                "bin_high": 0.5,
+                "count": 59,
+                "mean_predicted": 0.4472937870779287,
+                "observed_frequency": 0.5254237288135594
+              }
+            ]
+          },
+          "baseline_all_test_days": {
+            "sample_count": 59,
+            "brier_score": 0.5141103722342854,
+            "direction_hit_rate": 0.4745762711864407,
+            "percentile_coverage_80": {
+              "close_pct": 0.8135593220338984,
+              "remaining_high_pct": 0.8135593220338984,
+              "remaining_low_pct": 0.864406779661017
+            },
+            "up_probability_calibration": [
+              {
+                "bin_low": 0.4,
+                "bin_high": 0.5,
+                "count": 59,
+                "mean_predicted": 0.4472937870779287,
+                "observed_frequency": 0.5254237288135594
+              }
+            ]
+          },
+          "brier_improvement_vs_baseline": 0.0
+        },
+        "2": {
+          "tested_days": 59,
+          "estimated_days": 59,
+          "insufficient_support_days": 0,
+          "estimate_rate": 1.0,
+          "mean_backoff_positions": 2,
+          "conditional": {
+            "sample_count": 59,
+            "brier_score": 0.5141103722342854,
+            "direction_hit_rate": 0.4745762711864407,
+            "percentile_coverage_80": {
+              "close_pct": 0.8135593220338984,
+              "remaining_high_pct": 0.7796610169491526,
+              "remaining_low_pct": 0.8305084745762712
+            },
+            "up_probability_calibration": [
+              {
+                "bin_low": 0.4,
+                "bin_high": 0.5,
+                "count": 59,
+                "mean_predicted": 0.4472937870779287,
+                "observed_frequency": 0.5254237288135594
+              }
+            ]
+          },
+          "baseline_on_same_days": {
+            "sample_count": 59,
+            "brier_score": 0.5141103722342854,
+            "direction_hit_rate": 0.4745762711864407,
+            "percentile_coverage_80": {
+              "close_pct": 0.8135593220338984,
+              "remaining_high_pct": 0.7796610169491526,
+              "remaining_low_pct": 0.8305084745762712
+            },
+            "up_probability_calibration": [
+              {
+                "bin_low": 0.4,
+                "bin_high": 0.5,
+                "count": 59,
+                "mean_predicted": 0.4472937870779287,
+                "observed_frequency": 0.5254237288135594
+              }
+            ]
+          },
+          "baseline_all_test_days": {
+            "sample_count": 59,
+            "brier_score": 0.5141103722342854,
+            "direction_hit_rate": 0.4745762711864407,
+            "percentile_coverage_80": {
+              "close_pct": 0.8135593220338984,
+              "remaining_high_pct": 0.7796610169491526,
+              "remaining_low_pct": 0.8305084745762712
+            },
+            "up_probability_calibration": [
+              {
+                "bin_low": 0.4,
+                "bin_high": 0.5,
+                "count": 59,
+                "mean_predicted": 0.4472937870779287,
+                "observed_frequency": 0.5254237288135594
+              }
+            ]
+          },
+          "brier_improvement_vs_baseline": 0.0
+        },
+        "3": {
+          "tested_days": 59,
+          "estimated_days": 59,
+          "insufficient_support_days": 0,
+          "estimate_rate": 1.0,
+          "mean_backoff_positions": 3,
+          "conditional": {
+            "sample_count": 59,
+            "brier_score": 0.5141103722342854,
+            "direction_hit_rate": 0.4745762711864407,
+            "percentile_coverage_80": {
+              "close_pct": 0.8135593220338984,
+              "remaining_high_pct": 0.7796610169491526,
+              "remaining_low_pct": 0.864406779661017
+            },
+            "up_probability_calibration": [
+              {
+                "bin_low": 0.4,
+                "bin_high": 0.5,
+                "count": 59,
+                "mean_predicted": 0.4472937870779287,
+                "observed_frequency": 0.5254237288135594
+              }
+            ]
+          },
+          "baseline_on_same_days": {
+            "sample_count": 59,
+            "brier_score": 0.5141103722342854,
+            "direction_hit_rate": 0.4745762711864407,
+            "percentile_coverage_80": {
+              "close_pct": 0.8135593220338984,
+              "remaining_high_pct": 0.7796610169491526,
+              "remaining_low_pct": 0.864406779661017
+            },
+            "up_probability_calibration": [
+              {
+                "bin_low": 0.4,
+                "bin_high": 0.5,
+                "count": 59,
+                "mean_predicted": 0.4472937870779287,
+                "observed_frequency": 0.5254237288135594
+              }
+            ]
+          },
+          "baseline_all_test_days": {
+            "sample_count": 59,
+            "brier_score": 0.5141103722342854,
+            "direction_hit_rate": 0.4745762711864407,
+            "percentile_coverage_80": {
+              "close_pct": 0.8135593220338984,
+              "remaining_high_pct": 0.7796610169491526,
+              "remaining_low_pct": 0.864406779661017
+            },
+            "up_probability_calibration": [
+              {
+                "bin_low": 0.4,
+                "bin_high": 0.5,
+                "count": 59,
+                "mean_predicted": 0.4472937870779287,
+                "observed_frequency": 0.5254237288135594
+              }
+            ]
+          },
+          "brier_improvement_vs_baseline": 0.0
+        },
+        "4": {
+          "tested_days": 59,
+          "estimated_days": 59,
+          "insufficient_support_days": 0,
+          "estimate_rate": 1.0,
+          "mean_backoff_positions": 4,
+          "conditional": {
+            "sample_count": 59,
+            "brier_score": 0.5141103722342854,
+            "direction_hit_rate": 0.4745762711864407,
+            "percentile_coverage_80": {
+              "close_pct": 0.8135593220338984,
+              "remaining_high_pct": 0.7796610169491526,
+              "remaining_low_pct": 0.847457627118644
+            },
+            "up_probability_calibration": [
+              {
+                "bin_low": 0.4,
+                "bin_high": 0.5,
+                "count": 59,
+                "mean_predicted": 0.4472937870779287,
+                "observed_frequency": 0.5254237288135594
+              }
+            ]
+          },
+          "baseline_on_same_days": {
+            "sample_count": 59,
+            "brier_score": 0.5141103722342854,
+            "direction_hit_rate": 0.4745762711864407,
+            "percentile_coverage_80": {
+              "close_pct": 0.8135593220338984,
+              "remaining_high_pct": 0.7796610169491526,
+              "remaining_low_pct": 0.847457627118644
+            },
+            "up_probability_calibration": [
+              {
+                "bin_low": 0.4,
+                "bin_high": 0.5,
+                "count": 59,
+                "mean_predicted": 0.4472937870779287,
+                "observed_frequency": 0.5254237288135594
+              }
+            ]
+          },
+          "baseline_all_test_days": {
+            "sample_count": 59,
+            "brier_score": 0.5141103722342854,
+            "direction_hit_rate": 0.4745762711864407,
+            "percentile_coverage_80": {
+              "close_pct": 0.8135593220338984,
+              "remaining_high_pct": 0.7796610169491526,
+              "remaining_low_pct": 0.847457627118644
+            },
+            "up_probability_calibration": [
+              {
+                "bin_low": 0.4,
+                "bin_high": 0.5,
+                "count": 59,
+                "mean_predicted": 0.4472937870779287,
+                "observed_frequency": 0.5254237288135594
+              }
+            ]
+          },
+          "brier_improvement_vs_baseline": 0.0
+        },
+        "5": {
+          "tested_days": 59,
+          "estimated_days": 59,
+          "insufficient_support_days": 0,
+          "estimate_rate": 1.0,
+          "mean_backoff_positions": 5,
+          "conditional": {
+            "sample_count": 59,
+            "brier_score": 0.5141103722342854,
+            "direction_hit_rate": 0.4745762711864407,
+            "percentile_coverage_80": {
+              "close_pct": 0.8135593220338984,
+              "remaining_high_pct": 0.7627118644067796,
+              "remaining_low_pct": 0.8135593220338984
+            },
+            "up_probability_calibration": [
+              {
+                "bin_low": 0.4,
+                "bin_high": 0.5,
+                "count": 59,
+                "mean_predicted": 0.4472937870779287,
+                "observed_frequency": 0.5254237288135594
+              }
+            ]
+          },
+          "baseline_on_same_days": {
+            "sample_count": 59,
+            "brier_score": 0.5141103722342854,
+            "direction_hit_rate": 0.4745762711864407,
+            "percentile_coverage_80": {
+              "close_pct": 0.8135593220338984,
+              "remaining_high_pct": 0.7627118644067796,
+              "remaining_low_pct": 0.8135593220338984
+            },
+            "up_probability_calibration": [
+              {
+                "bin_low": 0.4,
+                "bin_high": 0.5,
+                "count": 59,
+                "mean_predicted": 0.4472937870779287,
+                "observed_frequency": 0.5254237288135594
+              }
+            ]
+          },
+          "baseline_all_test_days": {
+            "sample_count": 59,
+            "brier_score": 0.5141103722342854,
+            "direction_hit_rate": 0.4745762711864407,
+            "percentile_coverage_80": {
+              "close_pct": 0.8135593220338984,
+              "remaining_high_pct": 0.7627118644067796,
+              "remaining_low_pct": 0.8135593220338984
+            },
+            "up_probability_calibration": [
+              {
+                "bin_low": 0.4,
+                "bin_high": 0.5,
+                "count": 59,
+                "mean_predicted": 0.4472937870779287,
+                "observed_frequency": 0.5254237288135594
+              }
+            ]
+          },
+          "brier_improvement_vs_baseline": 0.0
+        },
+        "6": {
+          "tested_days": 59,
+          "estimated_days": 59,
+          "insufficient_support_days": 0,
+          "estimate_rate": 1.0,
+          "mean_backoff_positions": 6,
+          "conditional": {
+            "sample_count": 59,
+            "brier_score": 0.5141103722342854,
+            "direction_hit_rate": 0.4745762711864407,
+            "percentile_coverage_80": {
+              "close_pct": 0.8135593220338984,
+              "remaining_high_pct": 0.7966101694915254,
+              "remaining_low_pct": 0.8135593220338984
+            },
+            "up_probability_calibration": [
+              {
+                "bin_low": 0.4,
+                "bin_high": 0.5,
+                "count": 59,
+                "mean_predicted": 0.4472937870779287,
+                "observed_frequency": 0.5254237288135594
+              }
+            ]
+          },
+          "baseline_on_same_days": {
+            "sample_count": 59,
+            "brier_score": 0.5141103722342854,
+            "direction_hit_rate": 0.4745762711864407,
+            "percentile_coverage_80": {
+              "close_pct": 0.8135593220338984,
+              "remaining_high_pct": 0.7966101694915254,
+              "remaining_low_pct": 0.8135593220338984
+            },
+            "up_probability_calibration": [
+              {
+                "bin_low": 0.4,
+                "bin_high": 0.5,
+                "count": 59,
+                "mean_predicted": 0.4472937870779287,
+                "observed_frequency": 0.5254237288135594
+              }
+            ]
+          },
+          "baseline_all_test_days": {
+            "sample_count": 59,
+            "brier_score": 0.5141103722342854,
+            "direction_hit_rate": 0.4745762711864407,
+            "percentile_coverage_80": {
+              "close_pct": 0.8135593220338984,
+              "remaining_high_pct": 0.7966101694915254,
+              "remaining_low_pct": 0.8135593220338984
+            },
+            "up_probability_calibration": [
+              {
+                "bin_low": 0.4,
+                "bin_high": 0.5,
+                "count": 59,
+                "mean_predicted": 0.4472937870779287,
+                "observed_frequency": 0.5254237288135594
+              }
+            ]
+          },
+          "brier_improvement_vs_baseline": 0.0
+        }
+      },
+      "interpretation": "Positive Brier improvement is better than baseline. Measurements do not establish trading profitability."
+    }
+  },
+  "live_matches": {
+    "2020-01-01": {
+      "trade_date": "2020-01-01",
+      "config_id": "3916dc59ff6d8c20ccf38de4a917cb4bc47a2517b9138f8a56ebfa748efdd4d1",
+      "through_position": 3,
+      "time": "12:15",
+      "requested_prefix": "0O|1\\[Q1,Q1]|2L[Q2]|3X",
+      "requested_prefix_match_count": 0,
+      "selected_prefix": null,
+      "match_count": 0,
+      "backoff_positions": null,
+      "status": "insufficient_support",
+      "support_target": 5,
+      "estimate": null
+    },
+    "2020-06-30": {
+      "trade_date": "2020-06-30",
+      "config_id": "3916dc59ff6d8c20ccf38de4a917cb4bc47a2517b9138f8a56ebfa748efdd4d1",
+      "through_position": 3,
+      "time": "12:15",
+      "requested_prefix": "0O|1\\[Q1,Q1]|2L[Q2]|3L[Q2]",
+      "requested_prefix_match_count": 0,
+      "selected_prefix": "0O",
+      "match_count": 121,
+      "backoff_positions": 3,
+      "status": "estimated",
+      "support_target": 10,
+      "estimate": {
+        "p_close_above_open": 0.4793388429752066,
+        "p_close_below_open": 0.5206611570247934,
+        "p_close_at_open": 0.0,
+        "close_pct": {
+          "p10": -2.1791233049511196,
+          "p25": -1.021236270521758,
+          "p50": -0.11857224350093717,
+          "p75": 0.6910068598135538,
+          "p90": 1.6794813042076142
+        },
+        "remaining_high_pct": {
+          "p10": -1.0345218168317454,
+          "p25": -0.28227661171230056,
+          "p50": 0.33365496103980347,
+          "p75": 1.173904122163785,
+          "p90": 2.104998020942032
+        },
+        "remaining_low_pct": {
+          "p10": -2.8587690218476656,
+          "p25": -1.4796922240174044,
+          "p50": -0.5772131759821112,
+          "p75": 0.10788099023393141,
+          "p90": 0.7218404796608631
+        },
+        "next_leg": {
+          "event": "L",
+          "event_probabilities": {
+            "C": 0.2066115702479339,
+            "E": 0.008264462809917356,
+            "H": 0.36363636363636365,
+            "L": 0.4214876033057851
+          },
+          "by_event": {
+            "C": {
+              "count": 25,
+              "probability": 0.2066115702479339,
+              "dt_hours": {
+                "p10": 3.25,
+                "p25": 3.25,
+                "p50": 3.25,
+                "p75": 3.25,
+                "p90": 3.25
+              },
+              "dq_pct": {
+                "p10": -0.7273687063230615,
+                "p25": -0.33753469251476387,
+                "p50": 0.04567525306559131,
+                "p75": 0.46372368464583863,
+                "p90": 0.7771765903353991
+              },
+              "dq_low_pct": {
+                "p10": -0.7273687063230615,
+                "p25": -0.33753469251476387,
+                "p50": 0.04567525306559131,
+                "p75": 0.46372368464583863,
+                "p90": 0.7771765903353991
+              },
+              "dq_high_pct": {
+                "p10": -0.7273687063230615,
+                "p25": -0.33753469251476387,
+                "p50": 0.04567525306559131,
+                "p75": 0.46372368464583863,
+                "p90": 0.7771765903353991
+              }
+            },
+            "E": {
+              "count": 1,
+              "probability": 0.008264462809917356,
+              "dt_hours": {
+                "p10": 1.25,
+                "p25": 1.25,
+                "p50": 1.25,
+                "p75": 1.25,
+                "p90": 1.25
+              },
+              "dq_pct": null,
+              "dq_low_pct": {
+                "p10": -0.4127149212952645,
+                "p25": -0.4127149212952645,
+                "p50": -0.4127149212952645,
+                "p75": -0.4127149212952645,
+                "p90": -0.4127149212952645
+              },
+              "dq_high_pct": {
+                "p10": 0.1304179151293036,
+                "p25": 0.1304179151293036,
+                "p50": 0.1304179151293036,
+                "p75": 0.1304179151293036,
+                "p90": 0.1304179151293036
+              }
+            },
+            "H": {
+              "count": 44,
+              "probability": 0.36363636363636365,
+              "dt_hours": {
+                "p10": 1.25,
+                "p25": 1.75,
+                "p50": 2.25,
+                "p75": 2.75,
+                "p90": 2.75
+              },
+              "dq_pct": {
+                "p10": 0.3494001839820508,
+                "p25": 0.4768382670724773,
+                "p50": 0.8727700390703188,
+                "p75": 1.3393179260318868,
+                "p90": 3.149870739321082
+              },
+              "dq_low_pct": {
+                "p10": 0.3494001839820508,
+                "p25": 0.4768382670724773,
+                "p50": 0.8727700390703188,
+                "p75": 1.3393179260318868,
+                "p90": 3.149870739321082
+              },
+              "dq_high_pct": {
+                "p10": 0.3494001839820508,
+                "p25": 0.4768382670724773,
+                "p50": 0.8727700390703188,
+                "p75": 1.3393179260318868,
+                "p90": 3.149870739321082
+              }
+            },
+            "L": {
+              "count": 51,
+              "probability": 0.4214876033057851,
+              "dt_hours": {
+                "p10": 1.25,
+                "p25": 1.75,
+                "p50": 2.25,
+                "p75": 2.75,
+                "p90": 2.75
+              },
+              "dq_pct": {
+                "p10": -2.4194636964080414,
+                "p25": -1.7474436204511092,
+                "p50": -0.9912604844858937,
+                "p75": -0.5656246463020542,
+                "p90": -0.20770704634798984
+              },
+              "dq_low_pct": {
+                "p10": -2.4194636964080414,
+                "p25": -1.7474436204511092,
+                "p50": -0.9912604844858937,
+                "p75": -0.5656246463020542,
+                "p90": -0.20770704634798984
+              },
+              "dq_high_pct": {
+                "p10": -2.4194636964080414,
+                "p25": -1.7474436204511092,
+                "p50": -0.9912604844858937,
+                "p75": -0.5656246463020542,
+                "p90": -0.20770704634798984
+              }
+            }
+          },
+          "dt_p50_hours": 2.25,
+          "dq_p50_pct": -0.9912604844858937
+        },
+        "magnitude_band_distribution": {
+          "OH": {
+            "Q1": {
+              "count": 38,
+              "probability": 0.3140495867768595
+            },
+            "Q2": {
+              "count": 20,
+              "probability": 0.1652892561983471
+            },
+            "Q3": {
+              "count": 23,
+              "probability": 0.19008264462809918
+            },
+            "Q4": {
+              "count": 21,
+              "probability": 0.17355371900826447
+            },
+            "Q5": {
+              "count": 19,
+              "probability": 0.15702479338842976
+            }
+          },
+          "OL": {
+            "Q1": {
+              "count": 24,
+              "probability": 0.19834710743801653
+            },
+            "Q2": {
+              "count": 18,
+              "probability": 0.1487603305785124
+            },
+            "Q3": {
+              "count": 24,
+              "probability": 0.19834710743801653
+            },
+            "Q4": {
+              "count": 30,
+              "probability": 0.24793388429752067
+            },
+            "Q5": {
+              "count": 25,
+              "probability": 0.2066115702479339
+            }
+          },
+          "HL": {
+            "Q2": {
+              "count": 2,
+              "probability": 0.01652892561983471
+            },
+            "Q3": {
+              "count": 23,
+              "probability": 0.19008264462809918
+            },
+            "Q4": {
+              "count": 48,
+              "probability": 0.39669421487603307
+            },
+            "Q5": {
+              "count": 48,
+              "probability": 0.39669421487603307
+            }
+          },
+          "HC": {
+            "Q1": {
+              "count": 29,
+              "probability": 0.2396694214876033
+            },
+            "Q2": {
+              "count": 18,
+              "probability": 0.1487603305785124
+            },
+            "Q3": {
+              "count": 24,
+              "probability": 0.19834710743801653
+            },
+            "Q4": {
+              "count": 27,
+              "probability": 0.2231404958677686
+            },
+            "Q5": {
+              "count": 23,
+              "probability": 0.19008264462809918
+            }
+          },
+          "LC": {
+            "Q1": {
+              "count": 21,
+              "probability": 0.17355371900826447
+            },
+            "Q2": {
+              "count": 30,
+              "probability": 0.24793388429752067
+            },
+            "Q3": {
+              "count": 27,
+              "probability": 0.2231404958677686
+            },
+            "Q4": {
+              "count": 26,
+              "probability": 0.21487603305785125
+            },
+            "Q5": {
+              "count": 17,
+              "probability": 0.14049586776859505
+            }
+          }
+        }
+      }
+    }
+  },
+  "backslash_lookup": {
+    "prefix": "0O|1\\[Q1,Q1]|2L[Q2]",
+    "expected_count": 2,
+    "actual_count": 2,
+    "normal_plan": [
+      {
+        "Plan": {
+          "Node Type": "Index Only Scan",
+          "Parallel Aware": false,
+          "Async Capable": false,
+          "Scan Direction": "Forward",
+          "Index Name": "clusters_pkey",
+          "Relation Name": "clusters",
+          "Alias": "clusters",
+          "Startup Cost": 0.27,
+          "Total Cost": 2.49,
+          "Plan Rows": 2,
+          "Plan Width": 37,
+          "Index Cond": "((config_id = '3916dc59ff6d8c20ccf38de4a917cb4bc47a2517b9138f8a56ebfa748efdd4d1'::text) AND (path_code >= '0O|1\\[Q1,Q1]|2L[Q2]|'::text) AND (path_code < '0O|1\\[Q1,Q1]|2L[Q2]}'::text))",
+          "Filter": "(path_code ~~ '0O|1\\\\[Q1,Q1]|2L[Q2]|%'::text)"
+        }
+      }
+    ]
+  },
+  "checks": {
+    "health_exact": true,
+    "earliest_day_no_future_matches": true,
+    "backslash_literal_lookup": true,
+    "stored_days": 122
+  }
+}

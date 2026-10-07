@@ -1,36 +1,1449 @@
-openapi: 3.1.0
-info:
-  # Do not change the title, if the title changes, the import paths will be broken
-  title: Api
-  version: 0.1.0
-  description: API specification
-servers:
-  - url: /api
-    description: Base API path
-tags:
-  - name: health
-    description: Health operations
-paths:
-  /healthz:
-    get:
-      operationId: healthCheck
-      tags: [health]
-      summary: Health check
-      description: Returns server health status
-      responses:
-        "200":
-          description: Healthy
-          content:
-            application/json:
-              schema:
-                $ref: "#/components/schemas/HealthStatus"
-components:
-  schemas:
-    HealthStatus:
-      type: object
-      properties:
-        status:
-          type: string
-      required:
-        - status
-
+{
+  "openapi": "3.1.0",
+  "info": {
+    "title": "Api",
+    "description": "NIFTY intraday trajectory pattern API",
+    "version": "0.1.0"
+  },
+  "paths": {
+    "/patterns/encode": {
+      "post": {
+        "tags": [
+          "patterns"
+        ],
+        "summary": "Encode Pattern",
+        "description": "Encode supplied one-minute OHLC bars. Future bars are ignored for prefixes.\n\nAll statistical configuration is explicit. Set complete_session=true to\nrequire all 375 minutes and return the separate final bucket and outcomes.\nThis endpoint never connects to the database.",
+        "operationId": "encodePattern",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/EncodeRequest"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/PatternResponse"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Unauthorized",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "Not Found",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "409": {
+            "description": "Conflict",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Unprocessable Content",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "503": {
+            "description": "Service Unavailable",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          }
+        },
+        "security": [
+          {
+            "APIKeyHeader": []
+          }
+        ]
+      }
+    },
+    "/history/build": {
+      "post": {
+        "tags": [
+          "history"
+        ],
+        "summary": "Build History",
+        "description": "Read NIFTY/NSE/1m source bars and persist only project-owned derived records.\n\nRanges are inclusive and bounded to 366 calendar days per request; build\nsuccessive ranges for longer history. Rebuilding replaces only derived\nrecords for this configuration/date range, never source records.\nIncomplete/invalid sessions are reported, not repaired. E days are retained.\nDates with no source rows are not assumed to be trading sessions.",
+        "operationId": "buildHistory",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/BuildRequest"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/BuildResponse"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Unauthorized",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "Not Found",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "409": {
+            "description": "Conflict",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Unprocessable Content",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "503": {
+            "description": "Service Unavailable",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          }
+        },
+        "security": [
+          {
+            "APIKeyHeader": []
+          }
+        ]
+      }
+    },
+    "/history/status": {
+      "get": {
+        "tags": [
+          "history"
+        ],
+        "summary": "History Status",
+        "description": "Report stored coverage for a previously built configuration.",
+        "operationId": "historyStatus",
+        "security": [
+          {
+            "APIKeyHeader": []
+          }
+        ],
+        "parameters": [
+          {
+            "name": "config_id",
+            "in": "query",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "minLength": 64,
+              "maxLength": 64,
+              "pattern": "^[0-9a-f]{64}$",
+              "title": "Config Id"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HistoryStatus"
+                }
+              }
+            }
+          },
+          "401": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            },
+            "description": "Unauthorized"
+          },
+          "404": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            },
+            "description": "Not Found"
+          },
+          "409": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            },
+            "description": "Conflict"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            },
+            "description": "Unprocessable Content"
+          },
+          "503": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            },
+            "description": "Service Unavailable"
+          }
+        }
+      }
+    },
+    "/patterns/match": {
+      "post": {
+        "tags": [
+          "patterns"
+        ],
+        "summary": "Match Pattern",
+        "description": "Match completed hourly tokens using strictly earlier historical dates.\n\nSupply bars, or omit them to load the requested developing day from the\napproved source. Backoff never returns a distribution with fewer than N\nmembers. Outcome windows always start at the requested hour, not the\nshorter selected prefix. Position 7 is never a matching key.",
+        "operationId": "matchPattern",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/MatchRequest"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/PredictionResponse"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Unauthorized",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "Not Found",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "409": {
+            "description": "Conflict",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Unprocessable Content",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "503": {
+            "description": "Service Unavailable",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          }
+        },
+        "security": [
+          {
+            "APIKeyHeader": []
+          }
+        ]
+      }
+    },
+    "/evaluation/walk-forward": {
+      "post": {
+        "tags": [
+          "evaluation"
+        ],
+        "summary": "Evaluate",
+        "description": "Evaluate built history chronologically against all-prior-days outcomes.\n\nReturns direction hit rate, three-class Brier score, P(Up) calibration,\nempirical P10\u2013P90 coverage and support/backoff by hour. Conditional and\nbaseline comparisons use the same supported test days. No evaluation\nwrites, time weighting, fitted ML, or future-day training occurs.",
+        "operationId": "evaluateWalkForward",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/EvaluationRequest"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/EvaluationResponse"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Unauthorized",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "Not Found",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "409": {
+            "description": "Conflict",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Unprocessable Content",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "503": {
+            "description": "Service Unavailable",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          }
+        },
+        "security": [
+          {
+            "APIKeyHeader": []
+          }
+        ]
+      }
+    },
+    "/healthz": {
+      "get": {
+        "tags": [
+          "health"
+        ],
+        "summary": "Health check",
+        "description": "Returns process health, independently of database availability.",
+        "operationId": "healthCheck",
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HealthStatus"
+                }
+              }
+            }
+          }
+        }
+      }
+    }
+  },
+  "components": {
+    "schemas": {
+      "BandCount": {
+        "properties": {
+          "count": {
+            "type": "integer",
+            "title": "Count"
+          },
+          "probability": {
+            "type": "number",
+            "title": "Probability"
+          }
+        },
+        "type": "object",
+        "required": [
+          "count",
+          "probability"
+        ],
+        "title": "BandCount"
+      },
+      "Bar": {
+        "properties": {
+          "timestamp_ist": {
+            "type": "string",
+            "format": "date-time",
+            "title": "Timestamp Ist"
+          },
+          "open": {
+            "anyOf": [
+              {
+                "type": "number",
+                "exclusiveMinimum": 0.0
+              },
+              {
+                "type": "string",
+                "pattern": "^(?!^[-+.]*$)[+-]?0*\\d*\\.?\\d*$"
+              }
+            ],
+            "title": "Open"
+          },
+          "high": {
+            "anyOf": [
+              {
+                "type": "number",
+                "exclusiveMinimum": 0.0
+              },
+              {
+                "type": "string",
+                "pattern": "^(?!^[-+.]*$)[+-]?0*\\d*\\.?\\d*$"
+              }
+            ],
+            "title": "High"
+          },
+          "low": {
+            "anyOf": [
+              {
+                "type": "number",
+                "exclusiveMinimum": 0.0
+              },
+              {
+                "type": "string",
+                "pattern": "^(?!^[-+.]*$)[+-]?0*\\d*\\.?\\d*$"
+              }
+            ],
+            "title": "Low"
+          },
+          "close": {
+            "anyOf": [
+              {
+                "type": "number",
+                "exclusiveMinimum": 0.0
+              },
+              {
+                "type": "string",
+                "pattern": "^(?!^[-+.]*$)[+-]?0*\\d*\\.?\\d*$"
+              }
+            ],
+            "title": "Close"
+          }
+        },
+        "additionalProperties": false,
+        "type": "object",
+        "required": [
+          "timestamp_ist",
+          "open",
+          "high",
+          "low",
+          "close"
+        ],
+        "title": "Bar"
+      },
+      "BuildRequest": {
+        "properties": {
+          "config": {
+            "$ref": "#/components/schemas/PatternConfig"
+          },
+          "start_date": {
+            "type": "string",
+            "format": "date",
+            "title": "Start Date"
+          },
+          "end_date": {
+            "type": "string",
+            "format": "date",
+            "title": "End Date"
+          }
+        },
+        "additionalProperties": false,
+        "type": "object",
+        "required": [
+          "config",
+          "start_date",
+          "end_date"
+        ],
+        "title": "BuildRequest"
+      },
+      "BuildResponse": {
+        "properties": {
+          "status": {
+            "type": "string",
+            "const": "built",
+            "title": "Status"
+          },
+          "config_id": {
+            "type": "string",
+            "title": "Config Id"
+          },
+          "source": {
+            "type": "string",
+            "title": "Source"
+          },
+          "start_date": {
+            "type": "string",
+            "format": "date",
+            "title": "Start Date"
+          },
+          "end_date": {
+            "type": "string",
+            "format": "date",
+            "title": "End Date"
+          },
+          "source_days": {
+            "type": "integer",
+            "title": "Source Days"
+          },
+          "stored_days": {
+            "type": "integer",
+            "title": "Stored Days"
+          },
+          "unique_patterns": {
+            "type": "integer",
+            "title": "Unique Patterns"
+          },
+          "excluded_sessions": {
+            "items": {
+              "$ref": "#/components/schemas/ExcludedSession"
+            },
+            "type": "array",
+            "title": "Excluded Sessions"
+          },
+          "created_project_storage": {
+            "type": "boolean",
+            "title": "Created Project Storage"
+          }
+        },
+        "type": "object",
+        "required": [
+          "status",
+          "config_id",
+          "source",
+          "start_date",
+          "end_date",
+          "source_days",
+          "stored_days",
+          "unique_patterns",
+          "excluded_sessions",
+          "created_project_storage"
+        ],
+        "title": "BuildResponse"
+      },
+      "EncodeRequest": {
+        "properties": {
+          "config": {
+            "$ref": "#/components/schemas/PatternConfig"
+          },
+          "bars": {
+            "items": {
+              "$ref": "#/components/schemas/Bar"
+            },
+            "type": "array",
+            "maxItems": 1000,
+            "minItems": 1,
+            "title": "Bars"
+          },
+          "through_position": {
+            "type": "integer",
+            "maximum": 6.0,
+            "minimum": 0.0,
+            "title": "Through Position",
+            "default": 6
+          },
+          "complete_session": {
+            "type": "boolean",
+            "title": "Complete Session",
+            "default": false
+          }
+        },
+        "additionalProperties": false,
+        "type": "object",
+        "required": [
+          "config",
+          "bars"
+        ],
+        "title": "EncodeRequest"
+      },
+      "ErrorResponse": {
+        "properties": {
+          "error": {
+            "type": "string",
+            "title": "Error"
+          },
+          "message": {
+            "type": "string",
+            "title": "Message"
+          },
+          "details": {
+            "additionalProperties": true,
+            "type": "object",
+            "title": "Details"
+          }
+        },
+        "type": "object",
+        "required": [
+          "error",
+          "message",
+          "details"
+        ],
+        "title": "ErrorResponse"
+      },
+      "Estimate": {
+        "properties": {
+          "p_close_above_open": {
+            "type": "number",
+            "title": "P Close Above Open"
+          },
+          "p_close_below_open": {
+            "type": "number",
+            "title": "P Close Below Open"
+          },
+          "p_close_at_open": {
+            "type": "number",
+            "title": "P Close At Open"
+          },
+          "close_pct": {
+            "$ref": "#/components/schemas/Percentiles"
+          },
+          "remaining_high_pct": {
+            "$ref": "#/components/schemas/Percentiles"
+          },
+          "remaining_low_pct": {
+            "$ref": "#/components/schemas/Percentiles"
+          },
+          "next_leg": {
+            "$ref": "#/components/schemas/NextLegEstimate"
+          },
+          "magnitude_band_distribution": {
+            "additionalProperties": {
+              "additionalProperties": {
+                "$ref": "#/components/schemas/BandCount"
+              },
+              "type": "object"
+            },
+            "type": "object",
+            "title": "Magnitude Band Distribution"
+          }
+        },
+        "type": "object",
+        "required": [
+          "p_close_above_open",
+          "p_close_below_open",
+          "p_close_at_open",
+          "close_pct",
+          "remaining_high_pct",
+          "remaining_low_pct",
+          "next_leg",
+          "magnitude_band_distribution"
+        ],
+        "title": "Estimate"
+      },
+      "EvaluationRequest": {
+        "properties": {
+          "config": {
+            "$ref": "#/components/schemas/PatternConfig"
+          },
+          "support_target": {
+            "type": "integer",
+            "maximum": 100000.0,
+            "minimum": 1.0,
+            "title": "Support Target"
+          },
+          "history_start_date": {
+            "type": "string",
+            "format": "date",
+            "title": "History Start Date"
+          },
+          "test_start_date": {
+            "type": "string",
+            "format": "date",
+            "title": "Test Start Date"
+          },
+          "end_date": {
+            "type": "string",
+            "format": "date",
+            "title": "End Date"
+          },
+          "positions": {
+            "items": {
+              "type": "integer"
+            },
+            "type": "array",
+            "maxItems": 6,
+            "minItems": 1,
+            "title": "Positions"
+          }
+        },
+        "additionalProperties": false,
+        "type": "object",
+        "required": [
+          "config",
+          "support_target",
+          "history_start_date",
+          "test_start_date",
+          "end_date"
+        ],
+        "title": "EvaluationRequest"
+      },
+      "EvaluationResponse": {
+        "properties": {
+          "status": {
+            "type": "string",
+            "enum": [
+              "evaluated",
+              "no_test_days"
+            ],
+            "title": "Status"
+          },
+          "config_id": {
+            "type": "string",
+            "title": "Config Id"
+          },
+          "method": {
+            "type": "string",
+            "title": "Method"
+          },
+          "support_target": {
+            "type": "integer",
+            "title": "Support Target"
+          },
+          "test_start_date": {
+            "type": "string",
+            "format": "date",
+            "title": "Test Start Date"
+          },
+          "end_date": {
+            "type": "string",
+            "format": "date",
+            "title": "End Date"
+          },
+          "per_hour": {
+            "additionalProperties": {
+              "additionalProperties": true,
+              "type": "object"
+            },
+            "type": "object",
+            "title": "Per Hour"
+          },
+          "interpretation": {
+            "type": "string",
+            "title": "Interpretation"
+          }
+        },
+        "type": "object",
+        "required": [
+          "status",
+          "config_id",
+          "method",
+          "support_target",
+          "test_start_date",
+          "end_date",
+          "per_hour",
+          "interpretation"
+        ],
+        "title": "EvaluationResponse"
+      },
+      "ExcludedSession": {
+        "properties": {
+          "trade_date": {
+            "type": "string",
+            "format": "date",
+            "title": "Trade Date"
+          },
+          "reason": {
+            "type": "string",
+            "title": "Reason"
+          },
+          "details": {
+            "additionalProperties": true,
+            "type": "object",
+            "title": "Details"
+          }
+        },
+        "type": "object",
+        "required": [
+          "trade_date",
+          "reason",
+          "details"
+        ],
+        "title": "ExcludedSession"
+      },
+      "HealthStatus": {
+        "properties": {
+          "status": {
+            "type": "string",
+            "title": "Status"
+          }
+        },
+        "type": "object",
+        "required": [
+          "status"
+        ],
+        "title": "HealthStatus"
+      },
+      "HistoryStatus": {
+        "properties": {
+          "config_id": {
+            "type": "string",
+            "title": "Config Id"
+          },
+          "stored_days": {
+            "type": "integer",
+            "title": "Stored Days"
+          },
+          "first_date": {
+            "anyOf": [
+              {
+                "type": "string",
+                "format": "date"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "First Date"
+          },
+          "last_date": {
+            "anyOf": [
+              {
+                "type": "string",
+                "format": "date"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Last Date"
+          },
+          "unique_patterns": {
+            "type": "integer",
+            "title": "Unique Patterns"
+          }
+        },
+        "type": "object",
+        "required": [
+          "config_id",
+          "stored_days",
+          "first_date",
+          "last_date",
+          "unique_patterns"
+        ],
+        "title": "HistoryStatus"
+      },
+      "MatchRequest": {
+        "properties": {
+          "config": {
+            "$ref": "#/components/schemas/PatternConfig"
+          },
+          "support_target": {
+            "type": "integer",
+            "maximum": 100000.0,
+            "minimum": 1.0,
+            "title": "Support Target"
+          },
+          "trade_date": {
+            "type": "string",
+            "format": "date",
+            "title": "Trade Date"
+          },
+          "through_position": {
+            "type": "integer",
+            "maximum": 6.0,
+            "minimum": 0.0,
+            "title": "Through Position"
+          },
+          "bars": {
+            "anyOf": [
+              {
+                "items": {
+                  "$ref": "#/components/schemas/Bar"
+                },
+                "type": "array",
+                "maxItems": 1000,
+                "minItems": 1
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Bars"
+          }
+        },
+        "additionalProperties": false,
+        "type": "object",
+        "required": [
+          "config",
+          "support_target",
+          "trade_date",
+          "through_position"
+        ],
+        "title": "MatchRequest"
+      },
+      "NextEventDistribution": {
+        "properties": {
+          "count": {
+            "type": "integer",
+            "title": "Count"
+          },
+          "probability": {
+            "type": "number",
+            "title": "Probability"
+          },
+          "dt_hours": {
+            "$ref": "#/components/schemas/Percentiles"
+          },
+          "dq_pct": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/Percentiles"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          },
+          "dq_low_pct": {
+            "$ref": "#/components/schemas/Percentiles"
+          },
+          "dq_high_pct": {
+            "$ref": "#/components/schemas/Percentiles"
+          }
+        },
+        "type": "object",
+        "required": [
+          "count",
+          "probability",
+          "dt_hours",
+          "dq_pct",
+          "dq_low_pct",
+          "dq_high_pct"
+        ],
+        "title": "NextEventDistribution"
+      },
+      "NextLegEstimate": {
+        "properties": {
+          "event": {
+            "type": "string",
+            "enum": [
+              "H",
+              "L",
+              "C",
+              "E"
+            ],
+            "title": "Event"
+          },
+          "event_probabilities": {
+            "additionalProperties": {
+              "type": "number"
+            },
+            "type": "object",
+            "title": "Event Probabilities"
+          },
+          "by_event": {
+            "additionalProperties": {
+              "$ref": "#/components/schemas/NextEventDistribution"
+            },
+            "type": "object",
+            "title": "By Event"
+          },
+          "dt_p50_hours": {
+            "type": "number",
+            "title": "Dt P50 Hours"
+          },
+          "dq_p50_pct": {
+            "anyOf": [
+              {
+                "type": "number"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Dq P50 Pct"
+          }
+        },
+        "type": "object",
+        "required": [
+          "event",
+          "event_probabilities",
+          "by_event",
+          "dt_p50_hours",
+          "dq_p50_pct"
+        ],
+        "title": "NextLegEstimate"
+      },
+      "PatternConfig": {
+        "properties": {
+          "band_edges_pct": {
+            "items": {
+              "anyOf": [
+                {
+                  "type": "number"
+                },
+                {
+                  "type": "string",
+                  "pattern": "^(?!^[-+.]*$)[+-]?0*\\d*\\.?\\d*$"
+                }
+              ]
+            },
+            "type": "array",
+            "maxItems": 20,
+            "minItems": 1,
+            "title": "Band Edges Pct"
+          },
+          "close_tolerance_points": {
+            "anyOf": [
+              {
+                "type": "number",
+                "minimum": 0.0
+              },
+              {
+                "type": "string",
+                "pattern": "^(?!^[-+.]*$)[+-]?0*\\d*\\.?\\d*$"
+              }
+            ],
+            "title": "Close Tolerance Points"
+          }
+        },
+        "additionalProperties": false,
+        "type": "object",
+        "required": [
+          "band_edges_pct",
+          "close_tolerance_points"
+        ],
+        "title": "PatternConfig"
+      },
+      "PatternResponse": {
+        "properties": {
+          "trade_date": {
+            "type": "string",
+            "format": "date",
+            "title": "Trade Date"
+          },
+          "symbol": {
+            "type": "string",
+            "title": "Symbol"
+          },
+          "config_id": {
+            "type": "string",
+            "title": "Config Id"
+          },
+          "through_position": {
+            "type": "integer",
+            "title": "Through Position"
+          },
+          "complete_session": {
+            "type": "boolean",
+            "title": "Complete Session"
+          },
+          "open": {
+            "type": "string",
+            "title": "Open"
+          },
+          "tokens": {
+            "items": {
+              "type": "string"
+            },
+            "type": "array",
+            "title": "Tokens"
+          },
+          "path_code": {
+            "type": "string",
+            "title": "Path Code"
+          },
+          "buckets": {
+            "items": {
+              "additionalProperties": true,
+              "type": "object"
+            },
+            "type": "array",
+            "title": "Buckets"
+          },
+          "out_of_session_rows_ignored": {
+            "type": "integer",
+            "title": "Out Of Session Rows Ignored"
+          },
+          "future_session_rows_ignored": {
+            "type": "integer",
+            "title": "Future Session Rows Ignored"
+          },
+          "high": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "High"
+          },
+          "low": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Low"
+          },
+          "close": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Close"
+          },
+          "high_time": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "High Time"
+          },
+          "low_time": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Low Time"
+          },
+          "close_code": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Close Code"
+          },
+          "final_bucket": {
+            "anyOf": [
+              {
+                "additionalProperties": true,
+                "type": "object"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Final Bucket"
+          },
+          "measurements": {
+            "anyOf": [
+              {
+                "additionalProperties": true,
+                "type": "object"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Measurements"
+          },
+          "outcomes": {
+            "anyOf": [
+              {
+                "additionalProperties": true,
+                "type": "object"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Outcomes"
+          }
+        },
+        "type": "object",
+        "required": [
+          "trade_date",
+          "symbol",
+          "config_id",
+          "through_position",
+          "complete_session",
+          "open",
+          "tokens",
+          "path_code",
+          "buckets",
+          "out_of_session_rows_ignored",
+          "future_session_rows_ignored"
+        ],
+        "title": "PatternResponse"
+      },
+      "Percentiles": {
+        "properties": {
+          "p10": {
+            "type": "number",
+            "title": "P10"
+          },
+          "p25": {
+            "type": "number",
+            "title": "P25"
+          },
+          "p50": {
+            "type": "number",
+            "title": "P50"
+          },
+          "p75": {
+            "type": "number",
+            "title": "P75"
+          },
+          "p90": {
+            "type": "number",
+            "title": "P90"
+          }
+        },
+        "type": "object",
+        "required": [
+          "p10",
+          "p25",
+          "p50",
+          "p75",
+          "p90"
+        ],
+        "title": "Percentiles"
+      },
+      "PredictionResponse": {
+        "properties": {
+          "trade_date": {
+            "type": "string",
+            "format": "date",
+            "title": "Trade Date"
+          },
+          "config_id": {
+            "type": "string",
+            "title": "Config Id"
+          },
+          "through_position": {
+            "type": "integer",
+            "title": "Through Position"
+          },
+          "time": {
+            "type": "string",
+            "title": "Time"
+          },
+          "requested_prefix": {
+            "type": "string",
+            "title": "Requested Prefix"
+          },
+          "requested_prefix_match_count": {
+            "type": "integer",
+            "title": "Requested Prefix Match Count"
+          },
+          "selected_prefix": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Selected Prefix"
+          },
+          "match_count": {
+            "type": "integer",
+            "title": "Match Count"
+          },
+          "backoff_positions": {
+            "anyOf": [
+              {
+                "type": "integer"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Backoff Positions"
+          },
+          "status": {
+            "type": "string",
+            "enum": [
+              "estimated",
+              "insufficient_support"
+            ],
+            "title": "Status"
+          },
+          "support_target": {
+            "type": "integer",
+            "title": "Support Target"
+          },
+          "estimate": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/Estimate"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          }
+        },
+        "type": "object",
+        "required": [
+          "trade_date",
+          "config_id",
+          "through_position",
+          "time",
+          "requested_prefix",
+          "requested_prefix_match_count",
+          "selected_prefix",
+          "match_count",
+          "backoff_positions",
+          "status",
+          "support_target",
+          "estimate"
+        ],
+        "title": "PredictionResponse"
+      }
+    },
+    "securitySchemes": {
+      "APIKeyHeader": {
+        "type": "apiKey",
+        "in": "header",
+        "name": "X-API-Key"
+      }
+    }
+  },
+  "servers": [
+    {
+      "url": "/api",
+      "description": "Base API path"
+    }
+  ]
+}
