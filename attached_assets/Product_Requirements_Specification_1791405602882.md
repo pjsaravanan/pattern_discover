@@ -85,10 +85,24 @@ The base event portion has 14 characters for positions 0–6. The full stored pa
 | X | Neither: made no new session high or low |
 | / | Made both a new session low and a new session high in this hourly bucket, **low first then high** |
 | \ | Made both a new session high and a new session low in this hourly bucket, **high first then low** |
+| E | Made both new daily extremes, but their order is unavailable because the bucket's High and Low share the same one-minute timestamp |
 
 For each completed bucket in positions 1–6, compare that bucket's highest High and lowest Low with the day's running High and Low established **before the bucket**. Initialize both running references at the session Open. A strictly higher bucket High breaks the day's High; a strictly lower bucket Low breaks the day's Low. Equal values do not count as new extremes. Make both comparisons against the same pre-bucket references, then update the day's running High and Low to include the bucket.
 
-When both extremes are broken, determine `/` or `\` from the timestamps of the bucket's highest High and lowest Low, using the one-minute source bars—not the timestamps of the first boundary crossings. Handling of equal timestamps remains an open question. These symbols describe the day's running extremes, not comparisons with the previous candle or the eventual end-of-day extremes. They replace the draft's order-specific `B` and `D` symbols.
+When both extremes are broken, determine `/` or `\` from the timestamps of the bucket's highest High and lowest Low, using the one-minute source bars—not the timestamps of the first boundary crossings. If those timestamps are equal, use `E` provisionally; retain the bucket and day rather than flagging them as unusable or excluding them solely for unknown order. Do not infer an intraminute sequence from OHLC.
+
+Recalculate the bucket's extrema and provisional symbol as further bars arrive. An early same-minute pair does not freeze the bucket as `E`; later extrema may establish `/` or `\`. Finalize the symbol only when the bucket closes. The `E` rule may be reviewed after examining practical historical examples; no alternative order rule is approved yet.
+
+Read-only review of complete `NIFTY` / `NSE` / `1m` source sessions found these examples of same-minute final bucket extrema that both break the prior running daily extremes (all times IST):
+
+| Date | Bucket | Bucket interval | Shared extreme timestamp | Bucket High | Bucket Low |
+|---|---|---|---|---|---|
+| 2020-01-29 | 5 | 13:15–14:15 | 13:30 | 12169.60 | 12103.80 |
+| 2020-03-13 | 1 | 09:15–10:15 | 10:00 | 9166.90 | 8476.15 |
+
+These are observations from the approved source, not independent validation of market prices or intraminute order. The second example's large one-minute range warrants source-quality review; retain the provisional `E` treatment rather than silently discarding or correcting the data.
+
+These symbols describe the day's running extremes, not comparisons with the previous candle or the eventual end-of-day extremes. They replace the draft's order-specific `B` and `D` symbols. `E` applies to positions 1–6 and does not change the position 7 close codes.
 
 Contingency only: if `/` and `\` cause implementation or search complications, use `U` for low-to-high and `D` for high-to-low instead. This fallback is not currently adopted; if used, its `D` meaning supersedes the old draft's `D` meaning.
 
