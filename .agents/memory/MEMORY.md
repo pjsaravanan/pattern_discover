@@ -1,0 +1,1 @@
+- [PRS source of truth](prs-source-of-truth.md) — keep agreed requirements and deviations in the original PRS, not scattered documents.
