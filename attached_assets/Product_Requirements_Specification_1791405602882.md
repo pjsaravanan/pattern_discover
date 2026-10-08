@@ -1,7 +1,7 @@
 # Product Requirements Specification
 ## Intraday Trajectory Pattern Engine (NIFTY)
 
-**Status:** v1 implemented (living document); predictive validation remains preliminary
+**Status:** v1 implemented (living document); v1 does not beat the current-side rule (§9.2); improvements tracked in §12
 **Created:** 2026-10-08
 **Updated:** 2026-10-08
 **Owner:** Saravanan
@@ -320,6 +320,7 @@ Notes:
 
 - **Walk-forward only.** For each test day, build buckets solely from days before it.
 - **Baseline.** Compare each prefix's outcome distribution against the unconditional distribution of all prior days.
+- **Current-side baseline (added 2026-10-08).** Also compare against the rule "the close ends on the same side of the open as price is at the cutoff". This is the primary benchmark: the engine adds value only where it beats this rule (see §9.2).
 - **Success criterion.** Prefix-conditioned outcomes differ meaningfully from the baseline at hours 2–4, and the difference grows as the day progresses.
 - Report hit rate, calibration of P(Up), and percentile coverage per hour.
 
@@ -334,6 +335,26 @@ Notes:
 - A live literal-backslash prefix lookup returned exactly the expected member count; normal EXPLAIN used an Index Only Scan on the unique-cluster B-tree.
 
 No profitability claim or fixed production configuration follows from these limited evaluations. Up/Down/At-open probabilities use the configured close-tolerance categories.
+
+### 9.2 Benchmark against the current-side rule (2026-10-08)
+
+External review, verified against the stored history (1,656 days through 2026-10-07) and `validation/full_history_walk_forward.json`: the current-side rule beats the engine's direction hit rate at every hour.
+
+| Hour | Engine hit, N=5/10/20 (Jul–Oct 2026) | Mean backoff, N=20 | Rule, same 68 days | Rule, all 1,656 days |
+|---|---|---|---|---|
+| 1 | 0.66 / 0.68 / 0.68 | 0.04 | 0.74 | 0.69 |
+| 2 | 0.66 / 0.68 / 0.66 | 0.31 | 0.71 | 0.73 |
+| 3 | 0.66 / 0.65 / 0.66 | 1.03 | 0.76 | 0.77 |
+| 4 | 0.65 / 0.65 / 0.66 | 1.97 | 0.82 | 0.81 |
+| 5 | 0.65 / 0.65 / 0.66 | 2.97 | 0.87 | 0.87 |
+| 6 | 0.65 / 0.65 / 0.66 | 3.97 | 0.91 | 0.96 |
+
+Findings:
+- Banded codes are near-unique (1,340 codes for 1,656 days), so backoff grows by about one position per hour; afternoon estimates rest on the first one or two hours.
+- Outcome distributions are close-from-Open percentages of matched days, so after backoff the current day's price at the cutoff is not used at all. This, more than sparsity alone, is why the engine is flat (~0.66) while the rule rises to 0.96.
+- Close-percentile 80% coverage at N=20 is 0.84–0.90 (too wide early).
+
+Conclusion: v1 does not add directional value over the current-side rule. Remedies are tracked in §12 (B1, B2 first).
 
 ## 10. Scope
 
@@ -366,3 +387,53 @@ Storage: use only newly created, ownership-marked tables in a dedicated project 
 1. Select preferred numerical configurations after reviewing walk-forward results; these are explicit API inputs, not blockers or implicit defaults.
 2. Whether to introduce time weighting after walk-forward evaluation; no weighting is applied in v1.
 3. Review unusual source-price observations and the provisional E rule with further historical evidence; no source rows are modified or silently corrected.
+4. Should estimates be anchored at the cutoff price (matched days supply the remaining move), replacing close-from-Open distributions? (§9.2, §12 B1)
+5. What code granularity (bands or none, number of bands) keeps afternoon prefixes supported without backoff? (§12 B2)
+6. Is ML (v2) in scope once the current-side benchmark is in place? v1 excludes ML (§10). (§12 C)
+
+## 12. Ideas and action items (tracked)
+
+Living backlog for this project. Every idea or action item raised in discussion, review or operations is recorded here with its source and status, and updated as it is decided or done. Status: `idea` (not yet agreed), `open` (agreed, not started), `in progress`, `done`, `dropped`. Requirement changes that follow from an item are still written into the relevant section above.
+
+### A. Validation
+
+| ID | Item | Source | Status |
+|---|---|---|---|
+| A1 | Adopt the current-side rule as the primary baseline in walk-forward reports (§9) | Review 2026-10-08 | open |
+| A2 | Full-history walk-forward 2021–2026, per hour, with bootstrap confidence intervals and breakdown by year and VIX regime | Discussion 2026-10-08 | open |
+| A3 | Score ranges with pinball loss / CRPS, not only P10–P90 coverage | Discussion 2026-10-08 | idea |
+| A4 | Log every live hourly forecast for a genuine out-of-sample record | Discussion 2026-10-08 | idea |
+
+### B. Engine (within v1 principles unless noted)
+
+| ID | Item | Source | Status |
+|---|---|---|---|
+| B1 | Anchor at the cutoff: matched days supply the remaining move from the cutoff, added to the current day's level; P(up) from that | Review 2026-10-08 | open (first) |
+| B2 | Coarser code (no bands, or two) so afternoon prefixes keep support | Review 2026-10-08 | open |
+| B3 | Merge neighbouring bands before dropping hours when support is short | Discussion 2026-10-08 | idea |
+| B4 | Shrink low-support estimates toward the baseline instead of a hard N cutoff | Discussion 2026-10-08 | idea |
+| B5 | Context keys/filters: opening gap, previous day's code and close, INDIA VIX, expiry day, day of week | Discussion 2026-10-08 | idea |
+| B6 | Volatility-relative bands (deviates from §3 "no cross-day scaling"; test as an alternative) | Discussion 2026-10-08 | idea |
+| B7 | Time weighting (§7.3) once A2 exists | PRS §7.3 | idea |
+| B8 | "Range from here" (remaining high/low) as a primary output, with B2 | Review 2026-10-08 | idea |
+
+### C. ML track (v2; outside v1 scope)
+
+| ID | Item | Source | Status |
+|---|---|---|---|
+| C1 | Nearest neighbours on time-aligned trajectories (% from open, 5-minute steps; no time warping) | Discussion 2026-10-08 | idea |
+| C2 | LightGBM quantile benchmark on cutoff features | Discussion 2026-10-08 | idea |
+| C3 | Trajectory clustering for discovery (shape and magnitude separately) | Discussion 2026-10-08 | idea |
+| C4 | Metric learning / embeddings, only after C1–C2 | Discussion 2026-10-08 | idea |
+| C5 | Images for visualisation only (today's path over matched days, fan chart) | Discussion 2026-10-08 | idea |
+
+### D. Data and operations
+
+| ID | Item | Source | Status |
+|---|---|---|---|
+| D1 | Missed `price_data` day (2026-10-07): filled via chronosdata; reliability follow-ups tracked in chronosdata `NOTES.md` | Operations 2026-10-08 | done (fill); follow-ups open there |
+| D2 | Review `candles` vs `price_data` differences and the 15 excluded days (§8, §11.3) | Operations 2026-10-08 | open |
+| D3 | Redirect `/` and `/docs` to `/api/docs` | User 2026-10-08 | idea |
+| D4 | Rotate the VPS database password (it appeared in a working session) | Operations 2026-10-08 | open |
+| D5 | Railway API key set and verified (401 without key) | Operations 2026-10-08 | done |
+| D6 | Daily in-process sync live on Railway at 22:30 IST; confirm first run result | Operations 2026-10-08 | in progress |
