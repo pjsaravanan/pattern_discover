@@ -1592,6 +1592,10 @@
             "type": "string",
             "title": "Time"
           },
+          "bar_source": {
+            "type": "string",
+            "title": "Bar Source"
+          },
           "requested_prefix": {
             "type": "string",
             "title": "Requested Prefix"
@@ -1655,6 +1659,7 @@
           "config_id",
           "through_position",
           "time",
+          "bar_source",
           "requested_prefix",
           "requested_prefix_match_count",
           "selected_prefix",

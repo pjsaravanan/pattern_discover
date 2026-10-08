@@ -19,6 +19,7 @@ CORE_TABLES = ("configurations", "clusters", "day_patterns")
 LEDGER = "processed_days"
 TABLES = (*CORE_TABLES, LEDGER)
 SOURCE = ("NIFTY", "NSE", "1m")
+LIVE_SOURCE = ("NIFTY", "1m")  # public.candles: symbol, timeframe (exchange is blank there)
 # Project-owned indexes beyond primary keys. Ledger reads and deletes use its (config_id, trade_date) key.
 OWNED_INDEXES = {
     "nifty_clusters_prefix_idx":
@@ -26,9 +27,11 @@ OWNED_INDEXES = {
     "nifty_days_cluster_date_idx":
         "CREATE INDEX IF NOT EXISTS nifty_days_cluster_date_idx ON nifty_trajectory_v1.day_patterns (config_id,path_code,trade_date)",
 }
-# Recommended for the read-only source table; reported by `check`, never created by this project.
-SOURCE_INDEX_ADVICE = ("CREATE INDEX ON public.price_data (symbol, exchange, timeframe, timestamp_ist) "
-                       "-- to be created by the database owner, not this project")
+# Recommended for the read-only source tables; reported by `check`, never created by this project.
+SOURCE_INDEX_ADVICE = {
+    "price_data": "CREATE INDEX ON public.price_data (symbol, exchange, timeframe, timestamp_ist)",
+    "candles": "CREATE INDEX ON public.candles (symbol, timeframe, ts)",
+}
 SESSION_FILTER = """symbol=%s AND exchange=%s AND timeframe=%s
                  AND (timestamp_ist AT TIME ZONE 'Asia/Kolkata')::time >= TIME '09:15'
                  AND (timestamp_ist AT TIME ZONE 'Asia/Kolkata')::time < TIME '15:30'"""
@@ -61,6 +64,22 @@ def read_source(start: date, end: date, position: int | None = None):
     for row in rows:
         groups[row["timestamp_ist"].astimezone(IST).date()].append(row)
     return groups
+
+
+def read_developing(day: date, position: int):
+    """Current-day bars from the live `public.candles` feed (price_data is loaded after the session)."""
+    lower = datetime.combine(day, time(9, 15), IST)
+    upper = lower + timedelta(minutes=max(1, position * 60))
+    with connection() as conn:
+        conn.execute("SET TRANSACTION READ ONLY")
+        conn.execute("SET LOCAL statement_timeout = '30s'")
+        return conn.execute(
+            """SELECT ts AS timestamp_ist,open,high,low,close
+               FROM public.candles
+               WHERE symbol=%s AND timeframe=%s AND ts >= %s AND ts < %s
+               ORDER BY ts""",
+            (*LIVE_SOURCE, lower, upper),
+        ).fetchall()
 
 
 def source_dates(through: date):
@@ -96,21 +115,28 @@ def check_database():
     with connection() as conn:
         conn.execute("SET TRANSACTION READ ONLY")
         conn.execute("SET LOCAL statement_timeout = '30s'")
-        source_indexes = [r["indexdef"] for r in conn.execute(
-            "SELECT indexdef FROM pg_indexes WHERE schemaname='public' AND tablename='price_data' ORDER BY indexname",
-        ).fetchall()]
+        source_indexes = {t: [] for t in SOURCE_INDEX_ADVICE}
+        for r in conn.execute(
+            "SELECT tablename,indexdef FROM pg_indexes WHERE schemaname='public' AND tablename = ANY(%s) ORDER BY indexname",
+            (list(SOURCE_INDEX_ADVICE),),
+        ).fetchall():
+            source_indexes[r["tablename"]].append(r["indexdef"])
         plans = {}
-        for name, sql, params in (
-            ("session_read", f"""SELECT timestamp_ist,open,high,low,close FROM public.price_data
+        for name, table, sql, params in (
+            ("session_read", "price_data", f"""SELECT timestamp_ist,open,high,low,close FROM public.price_data
                 WHERE {SESSION_FILTER} AND timestamp_ist >= %s AND timestamp_ist < %s ORDER BY timestamp_ist""",
              (*SOURCE, lower, lower + timedelta(days=1))),
-            ("session_dates", f"""SELECT DISTINCT (timestamp_ist AT TIME ZONE 'Asia/Kolkata')::date FROM public.price_data
+            ("session_dates", "price_data", f"""SELECT DISTINCT (timestamp_ist AT TIME ZONE 'Asia/Kolkata')::date FROM public.price_data
                 WHERE {SESSION_FILTER} AND timestamp_ist < %s""", (*SOURCE, lower)),
+            ("developing_read", "candles", """SELECT ts,open,high,low,close FROM public.candles
+                WHERE symbol=%s AND timeframe=%s AND ts >= %s AND ts < %s ORDER BY ts""",
+             (*LIVE_SOURCE, lower, lower + timedelta(hours=6))),
         ):
             # Plain EXPLAIN plans the query without executing it.
             plan = conn.execute("EXPLAIN (FORMAT JSON) " + sql, params).fetchone()["QUERY PLAN"][0]["Plan"]
             scans = _scans(plan)
-            plans[name] = {"scans": scans, "uses_index": bool(scans) and all(s["node_type"] != "Seq Scan" for s in scans)}
+            plans[name] = {"table": f"public.{table}", "scans": scans,
+                           "uses_index": bool(scans) and all(s["node_type"] != "Seq Scan" for s in scans)}
         schema = conn.execute(
             "SELECT obj_description(oid,'pg_namespace') AS marker FROM pg_namespace WHERE nspname=%s", (SCHEMA,),
         ).fetchone()
@@ -122,7 +148,8 @@ def check_database():
         owned_indexes = {r["indexname"] for r in conn.execute(
             "SELECT indexname FROM pg_indexes WHERE schemaname=%s", (SCHEMA,),
         ).fetchall()}
-    source_ok = all(p["uses_index"] for p in plans.values())
+    unindexed = sorted({p["table"].removeprefix("public.") for p in plans.values() if not p["uses_index"]})
+    source_ok = not unindexed
     project = {
         "schema_present": schema is not None, "schema_owned": bool(schema) and schema["marker"] == MARKER,
         "tables": {t: ("owned" if tables[t] else "unmarked") if t in tables else "absent" for t in TABLES},
@@ -132,8 +159,9 @@ def check_database():
     collision = project["schema_present"] and (not project["schema_owned"] or "unmarked" in project["tables"].values())
     return {
         "status": "ok" if source_ok and not collision else "attention",
-        "source": {"table": "public.price_data", "indexes": source_indexes, "plans": plans,
-                   "index_recommendation": None if source_ok else SOURCE_INDEX_ADVICE},
+        "source": {"indexes": source_indexes, "plans": plans,
+                   # For the database owner to create; this project never does.
+                   "index_recommendations": [SOURCE_INDEX_ADVICE[t] for t in unindexed]},
         "project": project,
         "notes": "Read-only check. Missing project storage or indexes are created by the next build or sync; "
                  "source indexes are never created by this project.",

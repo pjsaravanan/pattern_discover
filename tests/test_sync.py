@@ -164,7 +164,51 @@ class IndexTests(unittest.TestCase):
             self.assertEqual(fake.commands[0][0], "SET TRANSACTION READ ONLY")
             self.assertFalse(any(s.lstrip().split()[0] in {"INSERT", "UPDATE", "DELETE", "CREATE", "ALTER", "DROP"}
                                  for s, _ in fake.commands))
-        self.assertIsNone(result["source"]["index_recommendation"])
+        self.assertEqual(result["source"]["index_recommendations"], [])
+
+
+class DevelopingSourceTests(unittest.TestCase):
+    class Store:
+        def __enter__(self):
+            return self
+        def __exit__(self, *args):
+            return False
+        def require_configuration(self, config_id):
+            return True
+        def count_prefix(self, config_id, prefix, as_of):
+            return 0
+        def members(self, config_id, prefix, as_of):
+            return []
+
+    def request(self, day):
+        from nifty_api.models import MatchRequest
+        return MatchRequest(config=CONFIG, support_target=5, trade_date=day, through_position=1)
+
+    def test_today_reads_candles_and_earlier_dates_read_price_data(self):
+        from nifty_api import service
+        today = date(2026, 1, 5)
+        clock = type("Clock", (), {"now": staticmethod(lambda tz=None: datetime(2026, 1, 5, 10, 20, tzinfo=IST))})
+        with patch("nifty_api.service.datetime", clock), patch("nifty_api.service.PatternStore", self.Store), \
+                patch("nifty_api.service.read_developing", return_value=bars()[:60]) as live, \
+                patch("nifty_api.service.read_source", return_value={}) as history:
+            result = service.match(self.request(today))
+            self.assertEqual(result["bar_source"], "public.candles:NIFTY/1m")
+            live.assert_called_once_with(today, 1)
+            history.assert_not_called()
+            with self.assertRaises(Exception):  # Earlier date: price_data only, which has no rows here.
+                service.match(self.request(date(2026, 1, 2)))
+            history.assert_called_once()
+
+    def test_developing_read_is_read_only_and_bounded_to_completed_hours(self):
+        from nifty_api.storage import read_developing
+        fake = Recorder()
+        with patch("nifty_api.storage.connection", return_value=fake):
+            read_developing(date(2026, 1, 5), 2)
+        self.assertEqual(fake.commands[0][0], "SET TRANSACTION READ ONLY")
+        sql, params = fake.commands[-1]
+        self.assertIn("FROM public.candles", sql)
+        self.assertEqual(params[:2], ("NIFTY", "1m"))
+        self.assertEqual((params[3] - params[2]).total_seconds(), 120 * 60)
 
 
 class InterfaceTests(unittest.TestCase):

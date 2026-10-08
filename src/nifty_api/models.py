@@ -159,6 +159,7 @@ class PredictionResponse(BaseModel):
     config_id: str
     through_position: int
     time: str
+    bar_source: str
     requested_prefix: str
     requested_prefix_match_count: int
     selected_prefix: str | None

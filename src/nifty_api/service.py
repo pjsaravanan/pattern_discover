@@ -1,10 +1,12 @@
 """Operations shared by the HTTP routes and the command line; inputs are validated request models."""
 
-from .engine import encode_day
+from datetime import datetime
+
+from .engine import IST, encode_day
 from .errors import PatternError
 from .evaluation import walk_forward
 from .matching import predict
-from .storage import PatternStore, build_patterns, check_database, read_source
+from .storage import PatternStore, build_patterns, check_database, read_developing, read_source
 from .sync import sync_history
 
 
@@ -41,9 +43,13 @@ def status(config_id):
 
 
 def match(request):
-    bars = request.bars
-    if bars is None:
+    bars, bar_source = request.bars, "supplied"
+    if bars is None and request.trade_date == datetime.now(IST).date():
+        # The developing session exists only in the live feed until price_data is loaded after the close.
+        bars, bar_source = read_developing(request.trade_date, request.through_position), "public.candles:NIFTY/1m"
+    elif bars is None:
         bars = read_source(request.trade_date, request.trade_date, request.through_position).get(request.trade_date, [])
+        bar_source = "public.price_data:NIFTY/NSE/1m"
     if not bars:
         raise PatternError("source_day_not_found", "No source bars exist for the requested date", status=404)
     encoded = encode_day(bars, request.config, request.through_position)
@@ -60,6 +66,7 @@ def match(request):
     return {
         **result, "trade_date": request.trade_date, "config_id": request.config.identity,
         "through_position": request.through_position, "time": f"{minutes // 60:02}:{minutes % 60:02}",
+        "bar_source": bar_source,
     }
 
 
