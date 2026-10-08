@@ -832,6 +832,11 @@
             "type": "object",
             "title": "Project"
           },
+          "scheduler": {
+            "additionalProperties": true,
+            "type": "object",
+            "title": "Scheduler"
+          },
           "notes": {
             "type": "string",
             "title": "Notes"
@@ -842,6 +847,7 @@
           "status",
           "source",
           "project",
+          "scheduler",
           "notes"
         ],
         "title": "CheckResponse"

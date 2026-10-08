@@ -116,14 +116,17 @@ The checked-in validation reports contain the initial 59-day evaluation and a re
 
 ## Deploying on Railway
 
-No `.env` file is used there: set **Variables** on each service (Raw Editor accepts `.env` contents). Railway supplies `PORT`.
+One service, configured by `railway.json`: `nifty serve --host 0.0.0.0`, health check `/api/healthz`. No `.env` file is used there: set **Variables** on the service (Raw Editor accepts `.env` contents). Railway supplies `PORT`.
 
-| Service | Config file | Runs |
-|---|---|---|
-| API | `railway.json` (default) | `nifty serve --host 0.0.0.0`, health check `/api/healthz` |
-| Daily sync (cron) | `railway.cron.json` (set as the service's config file path in its Settings) | `nifty sync` for the trial configuration, weekdays 12:30 UTC (18:00 IST), then exits |
+| Variable | Purpose |
+|---|---|
+| `VPS_DATABASE_URL` | Required |
+| `NIFTY_API_KEY` | Set it whenever the service has a public domain; otherwise every data endpoint, including `sync` with `rebuild`, is open to the internet |
+| `SYNC_AT`, `SYNC_CONFIG` | Optional daily sync inside the server, e.g. `SYNC_AT=22:30` (IST) and `SYNC_CONFIG={"band_edges_pct":["0.25","0.5","1","2"],"close_tolerance_points":"0"}` |
 
-Both services need `VPS_DATABASE_URL`. If the API service gets a public domain, set `NIFTY_API_KEY`; otherwise every data endpoint, including `sync --rebuild`, is open to the internet. The VPS PostgreSQL must accept connections from Railway's outbound addresses, which are dynamic unless static IPs are enabled. Railpack builds with `uv sync --locked`, so keep `uv.lock` in sync with `pyproject.toml`. Change the cron schedule or configuration in `railway.cron.json` as needed; cron schedules are UTC.
+**Daily sync.** With both sync variables set, the server runs the same sync as `nifty sync` every day at `SYNC_AT` IST (`price_data` normally finishes loading by 22:00). If the server starts after that time and today's sync has not run, it runs immediately; a failed run retries hourly. Sync only processes unflagged days, so repeats cost a source-date scan. `GET /api/system/check` shows the scheduler's next run and last result. Setting only one of the two variables, or an invalid value, stops the server at startup. Keep Railway's App Sleeping off and run one replica, or the schedule will not fire (or will fire per replica, which is harmless but redundant).
+
+The VPS PostgreSQL must accept connections from Railway's outbound addresses, which are dynamic unless static IPs are enabled. Railpack builds with `uv sync --locked`, so keep `uv.lock` in sync with `pyproject.toml`.
 
 ## Indexes
 

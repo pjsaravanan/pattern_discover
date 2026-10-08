@@ -2,6 +2,7 @@
 
 from datetime import datetime
 
+from . import scheduler
 from .engine import IST, encode_day
 from .errors import PatternError
 from .evaluation import walk_forward
@@ -11,7 +12,7 @@ from .sync import sync_history
 
 
 def check():
-    return check_database()
+    return {**check_database(), "scheduler": scheduler.describe()}
 
 
 def encode(request):

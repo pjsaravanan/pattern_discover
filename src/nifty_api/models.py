@@ -259,6 +259,7 @@ class CheckResponse(BaseModel):
     status: Literal["ok", "attention"]
     source: dict[str, Any]
     project: dict[str, Any]
+    scheduler: dict[str, Any]
     notes: str
 
 

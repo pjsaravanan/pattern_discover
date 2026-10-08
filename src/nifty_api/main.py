@@ -1,5 +1,6 @@
 """HTTP entry point. Importing this module never connects to a database."""
 
+from contextlib import asynccontextmanager
 import logging
 
 from fastapi import FastAPI, Request
@@ -8,6 +9,7 @@ from fastapi.responses import JSONResponse, RedirectResponse
 import psycopg
 from pydantic import BaseModel
 
+from . import scheduler
 from .errors import PatternError
 from .routes import router
 
@@ -15,7 +17,17 @@ class HealthStatus(BaseModel):
     status: str
 
 
+@asynccontextmanager
+async def lifespan(app):
+    # Invalid SYNC_AT/SYNC_CONFIG fail the startup visibly rather than silently skipping syncs.
+    stop = scheduler.start()
+    yield
+    if stop:
+        stop.set()
+
+
 app = FastAPI(
+    lifespan=lifespan,
     title="Api",
     description="NIFTY intraday trajectory pattern API",
     version="0.1.0",
