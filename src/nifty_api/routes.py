@@ -18,9 +18,10 @@ key_header = APIKeyHeader(name="X-API-Key", auto_error=False)
 
 
 def authorize(key: str | None = Security(key_header)):
+    # Optional for internal experimentation: enforced only when NIFTY_API_KEY is set.
     expected = os.environ.get("NIFTY_API_KEY")
     if not expected:
-        raise PatternError("authentication_not_configured", "Configure NIFTY_API_KEY", status=503)
+        return
     if not key or not hmac.compare_digest(key.encode(), expected.encode()):
         raise PatternError("unauthorized", "A valid X-API-Key is required", status=401)
 

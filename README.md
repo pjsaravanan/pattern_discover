@@ -16,7 +16,7 @@ Python API and command line. The [PRS](attached_assets/Product_Requirements_Spec
 
 ```sh
 uv sync                      # Python 3.14 (.python-version), installs the package and dev tools
-cp .env.example .env         # then fill in VPS_DATABASE_URL and NIFTY_API_KEY
+cp .env.example .env         # then fill in VPS_DATABASE_URL (NIFTY_API_KEY optional)
 uv run nifty check           # read-only check of database, source indexes and project storage
 uv run nifty serve           # API on 127.0.0.1:$PORT (or --host/--port)
 uv run pytest                # tests
@@ -25,7 +25,7 @@ uv run pytest                # tests
 `nifty` and `python -m nifty_api` are the same command. Settings come from the environment, seeded by the nearest `.env` (searching up from the working directory, or `NIFTY_ENV_FILE`); real environment variables win.
 
 - `VPS_DATABASE_URL`: existing VPS PostgreSQL connection, used privately.
-- `NIFTY_API_KEY`: required by API data endpoints via the `X-API-Key` header. Not needed by the command line. Never exposed in responses or documentation.
+- `NIFTY_API_KEY`: optional. When set, API data endpoints require it in the `X-API-Key` header; when unset they are open (internal use), and `serve` warns if bound beyond `127.0.0.1`. Not used by the command line. Never exposed in responses or documentation.
 - `PORT`: port for `nifty serve` when `--port` is not given.
 - Health (`/api/healthz`), interactive contract (`/api/docs`) and OpenAPI (`/api/openapi.json`) are public. `/api` redirects to the docs.
 

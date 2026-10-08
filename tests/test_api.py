@@ -28,6 +28,11 @@ class ApiTests(unittest.TestCase):
         self.assertEqual(response.status_code, 401)
         self.assertEqual(response.json()["error"], "unauthorized")
 
+    def test_api_is_open_when_no_key_is_configured(self):
+        with patch.dict(os.environ, {"NIFTY_API_KEY": ""}):
+            response = self.client.post("/api/patterns/encode", json=self.payload())
+        self.assertEqual(response.status_code, 200, response.text)
+
     def test_encode_json_contract_and_backslash_roundtrip(self):
         response = self.client.post("/api/patterns/encode", headers=self.headers, json=self.payload())
         self.assertEqual(response.status_code, 200, response.text)

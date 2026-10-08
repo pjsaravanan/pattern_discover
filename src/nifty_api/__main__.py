@@ -9,6 +9,7 @@ import argparse
 import csv
 import json
 import logging
+import os
 from pathlib import Path
 import sys
 
@@ -160,6 +161,9 @@ def main(argv=None):
             port = get_port(args.port)
         except ValueError as e:
             return fail("invalid_port", str(e))
+        if not os.environ.get("NIFTY_API_KEY") and args.host not in ("127.0.0.1", "localhost", "::1"):
+            logging.getLogger("nifty_api").warning(
+                "NIFTY_API_KEY is not set: data endpoints are open to anyone who can reach %s", args.host)
         uvicorn.run("nifty_api.main:app", host=args.host, port=port, access_log=False)
         return 0
     try:
