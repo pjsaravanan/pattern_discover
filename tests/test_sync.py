@@ -127,7 +127,64 @@ class LedgerStorageTests(unittest.TestCase):
         self.assertTrue(deletes and all("nifty_trajectory_v1." in s and "trade_date = ANY" in s for s in deletes))
 
 
+class IndexTests(unittest.TestCase):
+    def test_existing_schema_restores_missing_owned_indexes(self):
+        store = PatternStore()
+        store.conn = Recorder(schema={"marker": MARKER, "owned": True},
+                              tables=[{"relname": t, "marker": MARKER} for t in (*CORE_TABLES, LEDGER)])
+        store.initialize()
+        created = [s for s, _ in store.conn.commands if s.startswith("CREATE INDEX IF NOT EXISTS")]
+        self.assertEqual(len(created), 2)
+        self.assertTrue(all("nifty_trajectory_v1." in s for s in created))
+
+    def test_check_flags_sequential_source_scan_and_never_writes(self):
+        seq = {"QUERY PLAN": [{"Plan": {"Node Type": "Sort", "Plans": [
+            {"Node Type": "Seq Scan", "Relation Name": "price_data"}]}}]}
+        idx = {"QUERY PLAN": [{"Plan": {"Node Type": "Bitmap Heap Scan", "Relation Name": "price_data", "Plans": [
+            {"Node Type": "Bitmap Index Scan", "Index Name": "price_data_lookup"}]}}]}
+
+        class Conn(Recorder):
+            plan = seq
+            def execute(self, sql, params=None):
+                self.commands.append((sql, params))
+                if sql.startswith("EXPLAIN"):
+                    return type("R", (), {"fetchone": lambda _: Conn.plan})()
+                if "FROM pg_namespace" in sql:
+                    return type("R", (), {"fetchone": lambda _: None})()
+                return type("R", (), {"fetchall": lambda _: [], "fetchone": lambda _: None})()
+
+        from nifty_api.storage import check_database
+        for plan, expected in ((seq, "attention"), (idx, "ok")):
+            Conn.plan = plan
+            fake = Conn()
+            with patch("nifty_api.storage.connection", return_value=fake):
+                result = check_database()
+            self.assertEqual(result["status"], expected)
+            self.assertEqual(result["project"]["tables"][LEDGER], "absent")
+            self.assertEqual(fake.commands[0][0], "SET TRANSACTION READ ONLY")
+            self.assertFalse(any(s.lstrip().split()[0] in {"INSERT", "UPDATE", "DELETE", "CREATE", "ALTER", "DROP"}
+                                 for s, _ in fake.commands))
+        self.assertIsNone(result["source"]["index_recommendation"])
+
+
 class InterfaceTests(unittest.TestCase):
+    def setUp(self):
+        # Never let a developer's real .env leak into tests.
+        self.env = patch.dict(os.environ, {"NIFTY_ENV_FILE": os.devnull})
+        self.env.start()
+    def tearDown(self):
+        self.env.stop()
+
+    def test_env_file_seeds_but_never_overrides_environment(self):
+        from nifty_api.settings import load_environment
+        with tempfile.TemporaryDirectory() as folder:
+            path = os.path.join(folder, ".env")
+            with open(path, "w") as f:
+                f.write("NIFTY_TEST_A=from_file\nNIFTY_TEST_B=from_file\n")
+            with patch.dict(os.environ, {"NIFTY_ENV_FILE": path, "NIFTY_TEST_B": "from_env"}):
+                load_environment()
+                self.assertEqual((os.environ["NIFTY_TEST_A"], os.environ["NIFTY_TEST_B"]), ("from_file", "from_env"))
+
     def test_cli_encode_matches_api_result(self):
         with tempfile.TemporaryDirectory() as folder:
             path = os.path.join(folder, "bars.json")

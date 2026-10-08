@@ -2,13 +2,13 @@
 
 Inputs pass through the same request models as the API and results are the same
 JSON. The CLI uses the operator's own VPS_DATABASE_URL and needs no API key.
+Settings are read from the environment, seeded by the nearest .env file.
 """
 
 import argparse
 import csv
 import json
 import logging
-import os
 from pathlib import Path
 import sys
 
@@ -18,10 +18,11 @@ from pydantic import ValidationError
 from . import service
 from .errors import PatternError
 from .models import (
-    BuildRequest, BuildResponse, EncodeRequest, EvaluationRequest, EvaluationResponse,
+    BuildRequest, BuildResponse, CheckResponse, EncodeRequest, EvaluationRequest, EvaluationResponse,
     HistoryStatus, MatchRequest, PatternConfig, PatternResponse, PredictionResponse,
     SyncRequest, SyncResponse,
 )
+from .settings import get_port, load_environment
 
 
 def load_config(args):
@@ -79,6 +80,8 @@ OPERATIONS = {
 
 
 def run(args):
+    if args.command == "check":
+        return CheckResponse.model_validate(service.check()).model_dump(mode="json")
     if args.command == "status":
         config_id = args.config_id or PatternConfig.model_validate(load_config(args)).identity
         return HistoryStatus.model_validate(service.status(config_id)).model_dump(mode="json")
@@ -101,7 +104,9 @@ def parser():
 
     serve = commands.add_parser("serve", help="Run the HTTP API")
     serve.add_argument("--host", default="127.0.0.1")
-    serve.add_argument("--port", type=int, default=None, help="Defaults to the PORT environment variable")
+    serve.add_argument("--port", default=None, help="Defaults to the PORT environment variable")
+
+    commands.add_parser("check", help="Read-only check of source indexes and project storage")
 
     encode = commands.add_parser("encode", help="Encode supplied one-minute bars (no database)")
     add_config(encode)
@@ -148,11 +153,13 @@ def fail(code, message, details=None, exit_code=2):
 
 def main(argv=None):
     args = parser().parse_args(argv)
+    load_environment()
     if args.command == "serve":
         import uvicorn
-        port = args.port or int(os.environ.get("PORT", "0")) or None
-        if port is None:
-            return fail("missing_port", "Pass --port or set PORT")
+        try:
+            port = get_port(args.port)
+        except ValueError as e:
+            return fail("invalid_port", str(e))
         uvicorn.run("nifty_api.main:app", host=args.host, port=port, access_log=False)
         return 0
     try:

@@ -9,7 +9,7 @@ from fastapi.security import APIKeyHeader
 from . import service
 from .errors import PatternError
 from .models import (
-    BuildRequest, BuildResponse, EncodeRequest, ErrorResponse, EvaluationRequest,
+    BuildRequest, BuildResponse, CheckResponse, EncodeRequest, ErrorResponse, EvaluationRequest,
     EvaluationResponse, HistoryStatus, MatchRequest, PatternResponse, PredictionResponse,
     SyncRequest, SyncResponse,
 )
@@ -18,9 +18,9 @@ key_header = APIKeyHeader(name="X-API-Key", auto_error=False)
 
 
 def authorize(key: str | None = Security(key_header)):
-    expected = os.environ.get("NIFTY_API_KEY") or os.environ.get("SESSION_SECRET")
+    expected = os.environ.get("NIFTY_API_KEY")
     if not expected:
-        raise PatternError("authentication_not_configured", "Configure NIFTY_API_KEY or SESSION_SECRET", status=503)
+        raise PatternError("authentication_not_configured", "Configure NIFTY_API_KEY", status=503)
     if not key or not hmac.compare_digest(key.encode(), expected.encode()):
         raise PatternError("unauthorized", "A valid X-API-Key is required", status=401)
 
@@ -29,6 +29,17 @@ router = APIRouter(
     prefix="/api", dependencies=[Depends(authorize)],
     responses={code: {"model": ErrorResponse} for code in (401, 404, 409, 422, 503)},
 )
+
+
+@router.get("/system/check", response_model=CheckResponse, operation_id="checkSystem", tags=["system"])
+def check_system():
+    """Read-only check of source-table indexes/query plans and project-owned storage.
+
+    Reports whether source reads use an index (never creating source indexes)
+    and which project tables or indexes are absent; those are created by the
+    next build or sync. CLI: `check`.
+    """
+    return service.check()
 
 
 @router.post("/patterns/encode", response_model=PatternResponse, response_model_exclude_none=True,

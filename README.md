@@ -1,32 +1,41 @@
-# NIFTY Python API
+# NIFTY Intraday Trajectory Pattern Engine
 
-The original [PRS](../../attached_assets/Product_Requirements_Specification_1791405602882.md) remains the requirements source of truth. This file covers running and calling the implementation.
+Python API and command line. The [PRS](attached_assets/Product_Requirements_Specification_1791405602882.md) is the living requirements source of truth; this file covers running and calling the implementation.
 
-## Run and verify
+## Layout
 
-From the workspace root:
+| Path | Contents |
+|---|---|
+| `src/nifty_api/` | Package: engine, matching, evaluation, storage, sync, service, FastAPI app, CLI (`__main__.py`) |
+| `tests/` | pytest suite (no database needed) |
+| `scripts/` | `verify_live.py` (end-to-end check against a running server), `export_openapi.py` |
+| `docs/openapi.json` | Exported API contract |
+| `validation/` | Checked-in walk-forward reports |
+
+## Setup and run
 
 ```sh
-uv sync --frozen
-PORT=8080 PYTHONPATH=artifacts/api-server uv run --frozen python artifacts/api-server/run.py
-PYTHONPATH=artifacts/api-server uv run --frozen python -m unittest discover -s artifacts/api-server/tests -v
+uv sync                      # Python 3.14 (.python-version), installs the package and dev tools
+cp .env.example .env         # then fill in VPS_DATABASE_URL and NIFTY_API_KEY
+uv run nifty check           # read-only check of database, source indexes and project storage
+uv run nifty serve           # API on 127.0.0.1:$PORT (or --host/--port)
+uv run pytest                # tests
 ```
 
-Runtime dependencies are in the root `pyproject.toml` / `uv.lock`.
+`nifty` and `python -m nifty_api` are the same command. Settings come from the environment, seeded by the nearest `.env` (searching up from the working directory, or `NIFTY_ENV_FILE`); real environment variables win.
 
-- `PORT`: required service port.
-- `VPS_DATABASE_URL`: existing VPS PostgreSQL connection, used privately by the server.
-- `NIFTY_API_KEY`: optional dedicated API key; otherwise the existing `SESSION_SECRET` is used. No key is exposed in responses or documentation.
-- All data operations require the `X-API-Key` header. Health and API documentation are public.
-- Health: `/api/healthz`. Interactive contract: `/api/docs`. OpenAPI: `/api/openapi.json`.
-- `/api` redirects to the documentation, not the old image lab.
+- `VPS_DATABASE_URL`: existing VPS PostgreSQL connection, used privately.
+- `NIFTY_API_KEY`: required by API data endpoints via the `X-API-Key` header. Not needed by the command line. Never exposed in responses or documentation.
+- `PORT`: port for `nifty serve` when `--port` is not given.
+- Health (`/api/healthz`), interactive contract (`/api/docs`) and OpenAPI (`/api/openapi.json`) are public. `/api` redirects to the docs.
 
 ## Operations
 
-Every operation is available both as an API endpoint and as `python -m nifty_api <command>` (run from `artifacts/api-server`, or with it on `PYTHONPATH`). Both share the same code and return the same JSON. The CLI uses `VPS_DATABASE_URL` directly and needs no API key; errors go to stderr in the API's error format.
+Every operation is available both as an API endpoint and as a `nifty <command>`. Both share the same code and return the same JSON. The CLI uses `VPS_DATABASE_URL` directly and needs no API key; errors go to stderr in the API's error format.
 
 | Method | Path | CLI | Purpose |
 |---|---|---|---|
+| GET | `/api/system/check` | `check` | Read-only check: source-table indexes and query plans, project tables/indexes |
 | POST | `/api/history/sync` | `sync [--rebuild]` | Process every source session not yet flagged; first run loads all history |
 | POST | `/api/history/build` | `build --start-date --end-date` | Build an explicit inclusive range (≤366 days) |
 | POST | `/api/patterns/encode` | `encode --bars FILE [--complete-session]` | Encode supplied bars without accessing the database |
@@ -40,11 +49,11 @@ Each CLI data command needs the configuration: `--config FILE` (the JSON below) 
 ### Keeping history current
 
 ```sh
-python -m nifty_api sync --config trial.json            # first run: all history; later: only new/gap days
-python -m nifty_api sync --config trial.json --rebuild  # reprocess this configuration from scratch
+uv run nifty sync --config trial.json            # first run: all history; later: only new/gap days
+uv run nifty sync --config trial.json --rebuild  # reprocess this configuration from scratch
 ```
 
-Each source session is flagged `processed` or `excluded` (with reason) in `processed_days`, so it is not encoded again. Sync never processes the developing session (only through 15:30 IST), rechecks exclusions among the three most recent sessions, and commits per batch, so an interrupted run resumes on the next sync. Matching and evaluation read the stored days; they never re-encode history. API: `POST /api/history/sync` with `{"config": {...}, "rebuild": false}`.
+Use the command line for a first full load; over HTTP it is one long request. Each source session is flagged `processed` or `excluded` (with reason) in `processed_days`, so it is not encoded again. Sync never processes the developing session (only through 15:30 IST), rechecks exclusions among the three most recent sessions, and commits per batch, so an interrupted run resumes on the next sync. Matching and evaluation read the stored days; they never re-encode history. API: `POST /api/history/sync` with `{"config": {...}, "rebuild": false}`.
 
 Example configuration **for experimentation only**, not an API default:
 
@@ -103,14 +112,18 @@ Outcome forecasts are empirical measurements, not a guarantee of predictive adva
 
 The checked-in validation reports contain the initial 59-day evaluation and a recent 68-day evaluation using 1,655 built sessions through 2026-10-06. Performance differs by period. These are trial configurations, not fitted production defaults.
 
-`verify_live.py` verifies the running API through the local shared proxy, including an actual database-backed build and evaluation. Running it writes only project-owned derived tables. `--full-history` rebuilds the documented 2020–2026 trial configuration; it is not a read-only command.
+`uv run python scripts/verify_live.py [--base-url http://127.0.0.1:8080]` verifies a running API end to end, including a database-backed build and evaluation. It writes only project-owned derived tables. `--full-history` syncs the documented trial configuration across all history; it is not a read-only command.
+
+## Indexes
+
+Project-owned indexes (prefix lookup on clusters, cluster/date on day patterns, plus primary keys) are created with the schema and restored by the next build or sync if missing. The source table `public.price_data` is read-only to this project: `nifty check` reports whether source reads use an index and, if not, recommends one for the database owner to create. The project never creates it.
 
 ## Contract synchronization
 
 After API model/route changes:
 
 ```sh
-PYTHONPATH=artifacts/api-server uv run --frozen python artifacts/api-server/export_openapi.py
+uv run python scripts/export_openapi.py
 ```
 
-This writes `artifacts/api-server/openapi.json`, using `/api` as its server prefix and preserving `healthCheck` / `HealthStatus`. There is no frontend.
+This writes `docs/openapi.json`, using `/api` as its server prefix and preserving `healthCheck` / `HealthStatus`. There is no frontend.

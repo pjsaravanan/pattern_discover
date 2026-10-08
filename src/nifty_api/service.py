@@ -4,8 +4,12 @@ from .engine import encode_day
 from .errors import PatternError
 from .evaluation import walk_forward
 from .matching import predict
-from .storage import PatternStore, build_patterns, read_source
+from .storage import PatternStore, build_patterns, check_database, read_source
 from .sync import sync_history
+
+
+def check():
+    return check_database()
 
 
 def encode(request):

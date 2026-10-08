@@ -1,16 +1,13 @@
 """Regression tests for the pre-existing health contract."""
 
 import os
-from pathlib import Path
-import sys
 import unittest
 from unittest.mock import patch
 
 from fastapi.testclient import TestClient
 
-sys.path.insert(0, str(Path(__file__).resolve().parents[1]))
 from nifty_api.main import app
-from run import get_port
+from nifty_api.settings import get_port
 
 
 class HealthTests(unittest.TestCase):

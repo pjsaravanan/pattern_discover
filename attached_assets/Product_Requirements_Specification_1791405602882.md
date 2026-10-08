@@ -308,6 +308,12 @@ Notes:
 - A summary table (path prefix → member count, outcome percentiles) can be materialised for instant reads.
 - Source transactions are PostgreSQL READ ONLY. Matching reads use a REPEATABLE READ, READ ONLY snapshot so concurrent project rebuilds cannot change support between counting and fetching members.
 
+### 8.2 Indexes (2026-10-08)
+
+- **Project-owned:** primary keys on all four tables, `nifty_clusters_prefix_idx` (prefix lookup) and `nifty_days_cluster_date_idx` (cluster join and date bound). Ledger reads/deletes and range reads use the `(config_id, trade_date)` primary keys. These indexes are created with the schema; on an existing owned schema, any missing one is recreated (`CREATE INDEX IF NOT EXISTS`) by the next build or sync.
+- **Source (`public.price_data`):** read-only to the project, so the project never creates source indexes. Source reads filter on `symbol`, `exchange`, `timeframe` and a `timestamp_ist` range; an index leading with those columns, e.g. `(symbol, exchange, timeframe, timestamp_ist)`, is recommended for the database owner if absent.
+- **Check operation:** `check` (CLI) / `GET /api/system/check` (API) is read-only. It lists source indexes, runs plain `EXPLAIN` (no execution) on the session-read and session-date queries to report whether they avoid sequential scans, and reports project schema/table ownership and missing owned indexes. Status is `attention` when a source read uses a sequential scan or an unmarked project-schema collision exists.
+
 ## 9. Validation
 
 - **Walk-forward only.** For each test day, build buckets solely from days before it.
@@ -322,7 +328,7 @@ Notes:
 - Trial configuration: band edges `[0.25, 0.5, 1, 2]` percentage points and zero-point close tolerance, evaluated at N=5, 10 and 20. These are trial inputs, not API defaults or selected production parameters.
 - April–June 2020 walk-forward evaluation (59 test days) did not show a probability-score advantage over the unconditional baseline for these trials.
 - July–October 2026 evaluation (68 test days), trained only on earlier dates, showed positive Brier-score improvement at hours 2–4 for all three trial support targets. At N=20, improvements were approximately 0.0975, 0.1087 and 0.1044 respectively. Improvements were not monotonic with hour, and performance differs by period; the research success criterion is not established universally.
-- Full JSON results include direction hit rates, P(Up) calibration bins, P10–P90 coverage, and backoff/support metrics in `artifacts/api-server/validation/walk_forward.json` and `artifacts/api-server/validation/full_history_walk_forward.json`.
+- Full JSON results include direction hit rates, P(Up) calibration bins, P10–P90 coverage, and backoff/support metrics in `validation/walk_forward.json` and `validation/full_history_walk_forward.json`.
 - A live literal-backslash prefix lookup returned exactly the expected member count; normal EXPLAIN used an Index Only Scan on the unique-cluster B-tree.
 
 No profitability claim or fixed production configuration follows from these limited evaluations. Up/Down/At-open probabilities use the configured close-tolerance categories.
@@ -333,11 +339,13 @@ No profitability claim or fixed production configuration follows from these limi
 
 **Implementation target:** Replace the existing Express/TypeScript API Server artifact with Python rather than create a separate service or project. Preserve `GET /api/healthz` returning `{"status":"ok"}`.
 
-**Deviation (2026-10-08):** The repository is Python-only. All TypeScript/Node workspace packages (image-analysis web artifact, mockup sandbox, generated TS/Zod clients, Drizzle DB package, pnpm workspace) and Replit scaffolding were removed. The exported contract is `artifacts/api-server/openapi.json`.
+**Deviation (2026-10-08):** The repository is Python-only. All TypeScript/Node workspace packages (image-analysis web artifact, mockup sandbox, generated TS/Zod clients, Drizzle DB package, pnpm workspace) and Replit scaffolding were removed.
+
+**Layout and configuration (2026-10-08):** Installable `src` layout: package `src/nifty_api/`, tests `tests/` (pytest), scripts `scripts/`, exported contract `docs/openapi.json`, validation reports `validation/`. Python 3.14 via `uv` (`requires-python >= 3.13`). Settings come from environment variables, seeded by the nearest `.env` file (`.env.example` documents them; real environment variables take precedence): `VPS_DATABASE_URL`, `NIFTY_API_KEY` (required for API data endpoints; the Replit `SESSION_SECRET` fallback was removed), and `PORT`. The first full history load is run from the command line (`nifty sync`).
 
 **HTTP framework:** FastAPI is approved. HTTP request/response contracts are implemented and documented in `/api/docs`, `/api/openapi.json`, and the exported OpenAPI file. Errors use a consistent JSON envelope containing `error`, `message`, and `details`, without credential or raw-input echoes.
 
-**Interfaces (2026-10-08):** Every operation is available both as a command-line command (`python -m nifty_api <command>`) and as an API endpoint, sharing the same service code and JSON results. Commands: `serve`, `encode`, `build`, `sync` (with `--rebuild`), `status`, `match`, `evaluate`; endpoints are listed in `/api/docs`. The command line runs under the operator's own database credentials and needs no API key; it applies the same validation and write boundaries.
+**Interfaces (2026-10-08):** Every operation is available both as a command-line command (`nifty <command>`, equivalently `python -m nifty_api <command>`) and as an API endpoint, sharing the same service code and JSON results. Commands: `serve`, `check`, `encode`, `build`, `sync` (with `--rebuild`), `status`, `match`, `evaluate`; endpoints are listed in `/api/docs`. The command line runs under the operator's own database credentials and needs no API key; it applies the same validation and write boundaries.
 
 Approved completion boundary: implement JSON operations for historical build, history sync/rebuild (§8.1), encoding supplied one-minute bars, developing-day matching, and walk-forward evaluation. Require explicit `band_edges_pct`, `close_tolerance_points`, and, where estimates are requested, `support_target`; there are no guessed numerical defaults. API contracts are documented in `/api/docs` and `/api/openapi.json`. Protect data and build/evaluation operations with an API key; health and contract documentation remain public.
 

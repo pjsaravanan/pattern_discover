@@ -14,5 +14,5 @@ def contract():
 
 
 if __name__ == "__main__":
-    destination = Path(__file__).resolve().parent / "openapi.json"
-    destination.write_text(json.dumps(contract(), indent=2) + "\n")
+    destination = Path(__file__).resolve().parents[1] / "docs" / "openapi.json"
+    destination.write_text(json.dumps(contract(), indent=2) + "\n", encoding="utf-8")

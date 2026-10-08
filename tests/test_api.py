@@ -9,7 +9,7 @@ from fixtures import CONFIG, bars
 
 class ApiTests(unittest.TestCase):
     def setUp(self):
-        self.env = patch.dict(os.environ, {"SESSION_SECRET": "unit-test-only-key", "NIFTY_API_KEY": ""})
+        self.env = patch.dict(os.environ, {"NIFTY_API_KEY": "unit-test-only-key"})
         self.env.start()
         self.client = TestClient(app)
         self.headers = {"X-API-Key": "unit-test-only-key"}

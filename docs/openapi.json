@@ -6,6 +6,83 @@
     "version": "0.1.0"
   },
   "paths": {
+    "/system/check": {
+      "get": {
+        "tags": [
+          "system"
+        ],
+        "summary": "Check System",
+        "description": "Read-only check of source-table indexes/query plans and project-owned storage.\n\nReports whether source reads use an index (never creating source indexes)\nand which project tables or indexes are absent; those are created by the\nnext build or sync. CLI: `check`.",
+        "operationId": "checkSystem",
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/CheckResponse"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Unauthorized",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "Not Found",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "409": {
+            "description": "Conflict",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Unprocessable Content",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "503": {
+            "description": "Service Unavailable",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          }
+        },
+        "security": [
+          {
+            "APIKeyHeader": []
+          }
+        ]
+      }
+    },
     "/patterns/encode": {
       "post": {
         "tags": [
@@ -734,6 +811,40 @@
           "created_project_storage"
         ],
         "title": "BuildResponse"
+      },
+      "CheckResponse": {
+        "properties": {
+          "status": {
+            "type": "string",
+            "enum": [
+              "ok",
+              "attention"
+            ],
+            "title": "Status"
+          },
+          "source": {
+            "additionalProperties": true,
+            "type": "object",
+            "title": "Source"
+          },
+          "project": {
+            "additionalProperties": true,
+            "type": "object",
+            "title": "Project"
+          },
+          "notes": {
+            "type": "string",
+            "title": "Notes"
+          }
+        },
+        "type": "object",
+        "required": [
+          "status",
+          "source",
+          "project",
+          "notes"
+        ],
+        "title": "CheckResponse"
       },
       "EncodeRequest": {
         "properties": {

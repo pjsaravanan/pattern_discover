@@ -19,6 +19,16 @@ CORE_TABLES = ("configurations", "clusters", "day_patterns")
 LEDGER = "processed_days"
 TABLES = (*CORE_TABLES, LEDGER)
 SOURCE = ("NIFTY", "NSE", "1m")
+# Project-owned indexes beyond primary keys. Ledger reads and deletes use its (config_id, trade_date) key.
+OWNED_INDEXES = {
+    "nifty_clusters_prefix_idx":
+        "CREATE INDEX IF NOT EXISTS nifty_clusters_prefix_idx ON nifty_trajectory_v1.clusters (config_id,path_code text_pattern_ops)",
+    "nifty_days_cluster_date_idx":
+        "CREATE INDEX IF NOT EXISTS nifty_days_cluster_date_idx ON nifty_trajectory_v1.day_patterns (config_id,path_code,trade_date)",
+}
+# Recommended for the read-only source table; reported by `check`, never created by this project.
+SOURCE_INDEX_ADVICE = ("CREATE INDEX ON public.price_data (symbol, exchange, timeframe, timestamp_ist) "
+                       "-- to be created by the database owner, not this project")
 SESSION_FILTER = """symbol=%s AND exchange=%s AND timeframe=%s
                  AND (timestamp_ist AT TIME ZONE 'Asia/Kolkata')::time >= TIME '09:15'
                  AND (timestamp_ist AT TIME ZONE 'Asia/Kolkata')::time < TIME '15:30'"""
@@ -67,6 +77,67 @@ def source_dates(through: date):
             (*SOURCE, upper),
         ).fetchall()
     return [r["trade_date"] for r in rows]
+
+
+def _scans(plan):
+    """Every table/index access node, including partitions and bitmap scans."""
+    found = []
+    if "Relation Name" in plan or "Index Name" in plan:
+        found.append({"node_type": plan["Node Type"], "relation": plan.get("Relation Name"),
+                      "index": plan.get("Index Name")})
+    for child in plan.get("Plans", []):
+        found += _scans(child)
+    return found
+
+
+def check_database():
+    """Read-only diagnosis of source access paths and project-owned storage. Never creates anything."""
+    lower = datetime.combine(date.today(), time(9, 15), IST)
+    with connection() as conn:
+        conn.execute("SET TRANSACTION READ ONLY")
+        conn.execute("SET LOCAL statement_timeout = '30s'")
+        source_indexes = [r["indexdef"] for r in conn.execute(
+            "SELECT indexdef FROM pg_indexes WHERE schemaname='public' AND tablename='price_data' ORDER BY indexname",
+        ).fetchall()]
+        plans = {}
+        for name, sql, params in (
+            ("session_read", f"""SELECT timestamp_ist,open,high,low,close FROM public.price_data
+                WHERE {SESSION_FILTER} AND timestamp_ist >= %s AND timestamp_ist < %s ORDER BY timestamp_ist""",
+             (*SOURCE, lower, lower + timedelta(days=1))),
+            ("session_dates", f"""SELECT DISTINCT (timestamp_ist AT TIME ZONE 'Asia/Kolkata')::date FROM public.price_data
+                WHERE {SESSION_FILTER} AND timestamp_ist < %s""", (*SOURCE, lower)),
+        ):
+            # Plain EXPLAIN plans the query without executing it.
+            plan = conn.execute("EXPLAIN (FORMAT JSON) " + sql, params).fetchone()["QUERY PLAN"][0]["Plan"]
+            scans = _scans(plan)
+            plans[name] = {"scans": scans, "uses_index": bool(scans) and all(s["node_type"] != "Seq Scan" for s in scans)}
+        schema = conn.execute(
+            "SELECT obj_description(oid,'pg_namespace') AS marker FROM pg_namespace WHERE nspname=%s", (SCHEMA,),
+        ).fetchone()
+        tables = {r["relname"]: r["marker"] == MARKER for r in conn.execute(
+            """SELECT c.relname,obj_description(c.oid,'pg_class') AS marker
+               FROM pg_class c JOIN pg_namespace n ON n.oid=c.relnamespace
+               WHERE n.nspname=%s AND c.relkind='r'""", (SCHEMA,),
+        ).fetchall()}
+        owned_indexes = {r["indexname"] for r in conn.execute(
+            "SELECT indexname FROM pg_indexes WHERE schemaname=%s", (SCHEMA,),
+        ).fetchall()}
+    source_ok = all(p["uses_index"] for p in plans.values())
+    project = {
+        "schema_present": schema is not None, "schema_owned": bool(schema) and schema["marker"] == MARKER,
+        "tables": {t: ("owned" if tables[t] else "unmarked") if t in tables else "absent" for t in TABLES},
+        "missing_indexes": sorted(set(OWNED_INDEXES) - owned_indexes) if schema else sorted(OWNED_INDEXES),
+    }
+    # Absent storage or indexes are created by the next build/sync; only collisions need attention.
+    collision = project["schema_present"] and (not project["schema_owned"] or "unmarked" in project["tables"].values())
+    return {
+        "status": "ok" if source_ok and not collision else "attention",
+        "source": {"table": "public.price_data", "indexes": source_indexes, "plans": plans,
+                   "index_recommendation": None if source_ok else SOURCE_INDEX_ADVICE},
+        "project": project,
+        "notes": "Read-only check. Missing project storage or indexes are created by the next build or sync; "
+                 "source indexes are never created by this project.",
+    }
 
 
 def build_patterns(groups, config):
@@ -140,6 +211,8 @@ class PatternStore:
         if self._schema() is not None:
             if LEDGER not in self.verify_owned():
                 self._create_ledger(backfill=True)
+            for statement in OWNED_INDEXES.values():
+                self.conn.execute(statement)  # No-op when present; restores a dropped owned index.
             return False
         self.conn.execute("CREATE SCHEMA nifty_trajectory_v1")
         self.conn.execute("COMMENT ON SCHEMA nifty_trajectory_v1 IS 'nifty-trajectory-engine:owned:v1'")
@@ -162,8 +235,8 @@ class PatternStore:
                 PRIMARY KEY (config_id,trade_date),
                 FOREIGN KEY (config_id,path_code) REFERENCES nifty_trajectory_v1.clusters(config_id,path_code)
             )""")
-        self.conn.execute("CREATE INDEX nifty_clusters_prefix_idx ON nifty_trajectory_v1.clusters (config_id,path_code text_pattern_ops)")
-        self.conn.execute("CREATE INDEX nifty_days_cluster_date_idx ON nifty_trajectory_v1.day_patterns (config_id,path_code,trade_date)")
+        for statement in OWNED_INDEXES.values():
+            self.conn.execute(statement)
         for table in CORE_TABLES:
             # Identifiers come exclusively from the fixed allowlist, never requests.
             self.conn.execute(f"COMMENT ON TABLE {SCHEMA}.{table} IS 'nifty-trajectory-engine:owned:v1'")

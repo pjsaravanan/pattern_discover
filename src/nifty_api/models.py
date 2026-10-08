@@ -254,6 +254,13 @@ class EvaluationResponse(BaseModel):
     interpretation: str
 
 
+class CheckResponse(BaseModel):
+    status: Literal["ok", "attention"]
+    source: dict[str, Any]
+    project: dict[str, Any]
+    notes: str
+
+
 class ErrorResponse(BaseModel):
     error: str
     message: str

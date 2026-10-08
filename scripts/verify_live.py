@@ -1,4 +1,7 @@
-"""Verify the running API through the local shared proxy, without exposing keys."""
+"""Verify a running API end to end (`python -m nifty_api serve`), without exposing keys.
+
+Writes only project-owned derived tables. Run: uv run python scripts/verify_live.py [--base-url URL] [--full-history]
+"""
 
 from datetime import date
 import argparse
@@ -8,25 +11,25 @@ from pathlib import Path
 
 import httpx
 
+from nifty_api.settings import load_environment
 from nifty_api.storage import PatternStore
 
+VALIDATION = Path(__file__).resolve().parents[1] / "validation"
 
-def full_history():
+
+def full_history(base_url):
     config = {"band_edges_pct": ["0.25", "0.5", "1", "2"], "close_tolerance_points": "0"}
-    headers = {"X-API-Key": os.environ.get("NIFTY_API_KEY") or os.environ["SESSION_SECRET"]}
+    headers = {"X-API-Key": os.environ["NIFTY_API_KEY"]}
     report = {"trial_configuration": config, "build_batches": [], "evaluations": {},
               "warning": "Explicit trial configuration only. No fitted defaults or profitability claim."}
-    with httpx.Client(base_url="http://localhost:80", headers=headers, timeout=180) as client:
-        for year in range(2020, 2027):
-            end = f"{year}-12-31" if year < 2026 else "2026-10-06"
-            response = client.post("/api/history/build", json={
-                "config": config, "start_date": f"{year}-01-01", "end_date": end,
-            })
-            assert response.status_code == 200, f"Build failed: {response.status_code}; {response.text}"
-            result = response.json()
-            report["build_batches"].append(result)
-            print(json.dumps({"year": year, "stored_days": result["stored_days"],
-                              "excluded_days": len(result["excluded_sessions"])}), flush=True)
+    # A first full load is long; the CLI (`python -m nifty_api sync`) is the preferred path for it.
+    with httpx.Client(base_url=base_url, headers=headers, timeout=3600) as client:
+        response = client.post("/api/history/sync", json={"config": config, "rebuild": False})
+        assert response.status_code == 200, f"Sync failed: {response.status_code}; {response.text}"
+        result = response.json()
+        report["build_batches"] = result["batches"]
+        print(json.dumps({"pending_days": result["pending_days"], "stored_days": result["stored_days"],
+                          "excluded_days": len(result["excluded_sessions"])}), flush=True)
         cid = result["config_id"]
         response = client.get("/api/history/status", params={"config_id": cid})
         assert response.status_code == 200
@@ -51,19 +54,18 @@ def full_history():
         assert response.status_code == 200
         report["latest_source_match"] = response.json()
         print(json.dumps({"latest_source_match": {k: v for k, v in response.json().items() if k != "estimate"}}), flush=True)
-    folder = Path(__file__).resolve().parent / "validation"
-    folder.mkdir(exist_ok=True)
-    (folder / "full_history_walk_forward.json").write_text(json.dumps(report, indent=2) + "\n")
+    VALIDATION.mkdir(exist_ok=True)
+    (VALIDATION / "full_history_walk_forward.json").write_text(json.dumps(report, indent=2) + "\n")
     print("Saved validation/full_history_walk_forward.json; no credentials included.", flush=True)
 
 
-def main():
+def main(base_url):
     config = {"band_edges_pct": ["0.25", "0.5", "1", "2"], "close_tolerance_points": "0"}
-    headers = {"X-API-Key": os.environ.get("NIFTY_API_KEY") or os.environ["SESSION_SECRET"]}
+    headers = {"X-API-Key": os.environ["NIFTY_API_KEY"]}
     report = {"trial_configuration": config,
               "warning": "Explicit trial values, not API defaults or production recommendations."}
-    # This is the shared reverse proxy, not the service port. Keep keys on loopback.
-    with httpx.Client(base_url="http://localhost:80", headers=headers, timeout=120) as client:
+    # Keep keys on loopback unless the server is deliberately remote.
+    with httpx.Client(base_url=base_url, headers=headers, timeout=120) as client:
         health = client.get("/api/healthz")
         assert health.status_code == 200 and health.json() == {"status": "ok"}
         built = client.post("/api/history/build", json={
@@ -119,14 +121,15 @@ def main():
             print(json.dumps({"backslash_lookup": report["backslash_lookup"]}, indent=2))
         report["checks"] = {"health_exact": True, "earliest_day_no_future_matches": True,
                             "backslash_literal_lookup": True, "stored_days": len(patterns)}
-    folder = Path(__file__).resolve().parent / "validation"
-    folder.mkdir(exist_ok=True)
-    (folder / "walk_forward.json").write_text(json.dumps(report, indent=2) + "\n")
+    VALIDATION.mkdir(exist_ok=True)
+    (VALIDATION / "walk_forward.json").write_text(json.dumps(report, indent=2) + "\n")
     print("Saved validation/walk_forward.json; no credentials included.")
 
 
 if __name__ == "__main__":
     parser = argparse.ArgumentParser(description=__doc__)
-    parser.add_argument("--full-history", action="store_true", help="Build 2020–2026 history and evaluate recent sessions")
+    parser.add_argument("--base-url", default="http://127.0.0.1:8080", help="Running API base URL")
+    parser.add_argument("--full-history", action="store_true", help="Sync all history and evaluate recent sessions")
     args = parser.parse_args()
-    full_history() if args.full_history else main()
+    load_environment()
+    full_history(args.base_url) if args.full_history else main(args.base_url)
