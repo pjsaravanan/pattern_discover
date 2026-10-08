@@ -1,0 +1,20 @@
+{
+  "status": "synced",
+  "config_id": "3916dc59ff6d8c20ccf38de4a917cb4bc47a2517b9138f8a56ebfa748efdd4d1",
+  "source": "public.price_data:NIFTY/NSE/1m",
+  "rebuild": false,
+  "through_date": "2026-10-07",
+  "source_days": 1671,
+  "already_processed_days": 1670,
+  "pending_days": 1,
+  "stored_days": 1,
+  "excluded_sessions": [],
+  "batches": [
+    {
+      "start_date": "2026-10-07",
+      "end_date": "2026-10-07",
+      "days": 1
+    }
+  ],
+  "created_project_storage": false
+}
