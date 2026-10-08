@@ -1,4 +1,4 @@
-"""Authenticated JSON operations, without a custom frontend."""
+"""Authenticated JSON operations, without a custom frontend. Logic lives in `service`."""
 
 import hmac
 import os
@@ -6,15 +6,13 @@ import os
 from fastapi import APIRouter, Depends, Query, Security
 from fastapi.security import APIKeyHeader
 
-from .engine import encode_day
+from . import service
 from .errors import PatternError
-from .evaluation import walk_forward
-from .matching import predict
 from .models import (
     BuildRequest, BuildResponse, EncodeRequest, ErrorResponse, EvaluationRequest,
     EvaluationResponse, HistoryStatus, MatchRequest, PatternResponse, PredictionResponse,
+    SyncRequest, SyncResponse,
 )
-from .storage import PatternStore, build_patterns, read_source
 
 key_header = APIKeyHeader(name="X-API-Key", auto_error=False)
 
@@ -40,40 +38,43 @@ def encode_pattern(request: EncodeRequest):
 
     All statistical configuration is explicit. Set complete_session=true to
     require all 375 minutes and return the separate final bucket and outcomes.
-    This endpoint never connects to the database.
+    This endpoint never connects to the database. CLI: `encode`.
     """
-    return encode_day(request.bars, request.config, request.through_position, request.complete_session)
+    return service.encode(request)
 
 
 @router.post("/history/build", response_model=BuildResponse, operation_id="buildHistory", tags=["history"])
 def build_history(request: BuildRequest):
     """Read NIFTY/NSE/1m source bars and persist only project-owned derived records.
 
-    Ranges are inclusive and bounded to 366 calendar days per request; build
-    successive ranges for longer history. Rebuilding replaces only derived
-    records for this configuration/date range, never source records.
-    Incomplete/invalid sessions are reported, not repaired. E days are retained.
-    Dates with no source rows are not assumed to be trading sessions.
+    Ranges are inclusive and bounded to 366 calendar days per request; use
+    history/sync to process all history without manual ranges. Rebuilding
+    replaces derived records and processed-day flags for this configuration/
+    date range, never source records. Incomplete/invalid sessions are reported
+    and flagged, not repaired. E days are retained. Dates with no source rows
+    are not assumed to be trading sessions. CLI: `build`.
     """
-    groups = read_source(request.start_date, request.end_date)
-    patterns, excluded = build_patterns(groups, request.config)
-    with PatternStore() as store:
-        created = store.save(request.config, patterns, request.start_date, request.end_date)
-    return {
-        "status": "built", "config_id": request.config.identity, "source": "public.price_data:NIFTY/NSE/1m",
-        "start_date": request.start_date, "end_date": request.end_date,
-        "source_days": len(groups), "stored_days": len(patterns),
-        "unique_patterns": len({p["path_code"] for p in patterns}),
-        "excluded_sessions": excluded, "created_project_storage": created,
-    }
+    return service.build(request)
+
+
+@router.post("/history/sync", response_model=SyncResponse, operation_id="syncHistory", tags=["history"])
+def sync_history(request: SyncRequest):
+    """Process every source session not yet flagged for this configuration.
+
+    The first sync processes all available history; later syncs process only
+    new or gap dates, plus excluded dates among the three most recent sessions.
+    Only sessions through the last complete session (15:30 IST) are processed.
+    rebuild=true deletes this configuration's derived records and flags, then
+    reprocesses everything. Each batch commits separately, so an interrupted
+    sync resumes on the next call. Long-running on a first load. CLI: `sync`.
+    """
+    return service.sync(request)
 
 
 @router.get("/history/status", response_model=HistoryStatus, operation_id="historyStatus", tags=["history"])
 def history_status(config_id: str = Query(min_length=64, max_length=64, pattern="^[0-9a-f]{64}$")):
-    """Report stored coverage for a previously built configuration."""
-    with PatternStore() as store:
-        store.require_configuration(config_id)
-        return {"config_id": config_id, **store.status(config_id)}
+    """Report stored coverage and processed-day flags for a built configuration. CLI: `status`."""
+    return service.status(config_id)
 
 
 @router.post("/patterns/match", response_model=PredictionResponse, operation_id="matchPattern", tags=["patterns"])
@@ -83,28 +84,9 @@ def match_pattern(request: MatchRequest):
     Supply bars, or omit them to load the requested developing day from the
     approved source. Backoff never returns a distribution with fewer than N
     members. Outcome windows always start at the requested hour, not the
-    shorter selected prefix. Position 7 is never a matching key.
+    shorter selected prefix. Position 7 is never a matching key. CLI: `match`.
     """
-    bars = request.bars
-    if bars is None:
-        bars = read_source(request.trade_date, request.trade_date, request.through_position).get(request.trade_date, [])
-    if not bars:
-        raise PatternError("source_day_not_found", "No source bars exist for the requested date", status=404)
-    encoded = encode_day(bars, request.config, request.through_position)
-    if encoded["trade_date"] != request.trade_date.isoformat():
-        raise PatternError("date_mismatch", "Supplied bars must belong to trade_date")
-    with PatternStore() as store:
-        store.require_configuration(request.config.identity)
-        result = predict(
-            encoded["tokens"], request.through_position, request.support_target,
-            lambda prefix: store.count_prefix(request.config.identity, prefix, request.trade_date),
-            lambda prefix: store.members(request.config.identity, prefix, request.trade_date),
-        )
-    minutes = 555 + request.through_position * 60
-    return {
-        **result, "trade_date": request.trade_date, "config_id": request.config.identity,
-        "through_position": request.through_position, "time": f"{minutes // 60:02}:{minutes % 60:02}",
-    }
+    return service.match(request)
 
 
 @router.post("/evaluation/walk-forward", response_model=EvaluationResponse,
@@ -115,10 +97,6 @@ def evaluate(request: EvaluationRequest):
     Returns direction hit rate, three-class Brier score, P(Up) calibration,
     empirical P10–P90 coverage and support/backoff by hour. Conditional and
     baseline comparisons use the same supported test days. No evaluation
-    writes, time weighting, fitted ML, or future-day training occurs.
+    writes, time weighting, fitted ML, or future-day training occurs. CLI: `evaluate`.
     """
-    with PatternStore() as store:
-        store.require_configuration(request.config.identity)
-        patterns = store.range(request.config.identity, request.history_start_date, request.end_date)
-    result = walk_forward(patterns, request.test_start_date, request.end_date, request.support_target, request.positions)
-    return {"config_id": request.config.identity, **result}
+    return service.evaluate(request)

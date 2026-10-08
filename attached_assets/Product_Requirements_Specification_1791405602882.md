@@ -238,7 +238,7 @@ The approved source is `public.price_data` in the user's VPS PostgreSQL database
 
 Initial read-only review found an additional 09:14 IST row in recent sampled sessions. Its exclusion and the start-stamped minute convention are approved as defined in §4.
 
-The implemented storage supersedes the draft's unqualified `day_pattern` table. Three tables are created only in a new dedicated schema, `nifty_trajectory_v1`. Schema and tables carry an application ownership marker; initialization refuses any unowned or unmarked collision. Do not run these declarations manually against existing objects.
+The implemented storage supersedes the draft's unqualified `day_pattern` table. Four tables are created only in a new dedicated schema, `nifty_trajectory_v1`. Schema and tables carry an application ownership marker; initialization refuses any unowned or unmarked collision. Do not run these declarations manually against existing objects.
 
 ```sql
 CREATE TABLE nifty_trajectory_v1.configurations (
@@ -263,7 +263,28 @@ CREATE INDEX nifty_clusters_prefix_idx
   ON nifty_trajectory_v1.clusters(config_id, path_code text_pattern_ops);
 CREATE INDEX nifty_days_cluster_date_idx
   ON nifty_trajectory_v1.day_patterns(config_id, path_code, trade_date);
+CREATE TABLE nifty_trajectory_v1.processed_days (
+    config_id TEXT NOT NULL REFERENCES nifty_trajectory_v1.configurations(id),
+    trade_date DATE NOT NULL,
+    status TEXT NOT NULL CHECK (status IN ('processed', 'excluded')),
+    reason TEXT,
+    details JSONB NOT NULL DEFAULT '{}',
+    processed_at TIMESTAMPTZ NOT NULL DEFAULT now(),
+    PRIMARY KEY (config_id, trade_date)
+);
 ```
+
+`processed_days` is the per-configuration, per-date processing ledger (added 2026-10-08). Every source session date handled by a build or sync is flagged `processed` (stored in `day_patterns`) or `excluded` (with the exclusion reason and details). On an existing ownership-marked schema without this table, the next write operation creates and marks it, and flags every date already in `day_patterns` as `processed`; earlier excluded dates are re-examined once.
+
+### 8.1 History sync and rebuild
+
+Historical days are encoded once, stored, and then referenced by matching and evaluation; they are not re-encoded per request. **Sync** keeps a configuration current:
+
+- It reads, read-only, the distinct source session dates up to the **last complete session**: today once it is 15:30 IST or later, otherwise the previous calendar date. A developing session is never flagged.
+- Pending dates are source dates with no ledger flag, plus `excluded` dates among the three most recent source sessions (rechecked in case late source data completes them). The first run for a configuration therefore processes all available history; later runs process only new or gap dates.
+- Pending dates are processed in chunks of consecutive source sessions spanning at most 366 calendar days. Each chunk's day patterns and ledger flags are written in one transaction, so an interrupted sync resumes at the next run.
+- **Rebuild** deletes only that configuration's ledger flags, day patterns and clusters (never source data or other configurations), then syncs everything up to the last complete session. An interrupted rebuild is completed by a later plain sync.
+- The explicit range build replaces stored rows and ledger flags for its inclusive range.
 
 The complete JSONB pattern retains symbol, OHLC values, extrema timestamps, tokens, separate close code/final bucket, raw points/legs, magnitude bands, and outcomes at each hourly cutoff. Prices are decimal strings to retain precision. Configurations fingerprint the encoding version, band edges and close tolerance; N is a separate matching/evaluation input. Rebuilding a range replaces only derived rows for that configuration/range.
 
@@ -316,7 +337,9 @@ No profitability claim or fixed production configuration follows from these limi
 
 **HTTP framework:** FastAPI is approved. HTTP request/response contracts are implemented and documented in `/api/docs`, `/api/openapi.json`, and the exported OpenAPI file. Errors use a consistent JSON envelope containing `error`, `message`, and `details`, without credential or raw-input echoes.
 
-Approved completion boundary: implement JSON operations for historical build, encoding supplied one-minute bars, developing-day matching, and walk-forward evaluation. Require explicit `band_edges_pct`, `close_tolerance_points`, and, where estimates are requested, `support_target`; there are no guessed numerical defaults. API contracts are documented in `/api/docs` and `/api/openapi.json`. Protect data and build/evaluation operations with an API key; health and contract documentation remain public.
+**Interfaces (2026-10-08):** Every operation is available both as a command-line command (`python -m nifty_api <command>`) and as an API endpoint, sharing the same service code and JSON results. Commands: `serve`, `encode`, `build`, `sync` (with `--rebuild`), `status`, `match`, `evaluate`; endpoints are listed in `/api/docs`. The command line runs under the operator's own database credentials and needs no API key; it applies the same validation and write boundaries.
+
+Approved completion boundary: implement JSON operations for historical build, history sync/rebuild (§8.1), encoding supplied one-minute bars, developing-day matching, and walk-forward evaluation. Require explicit `band_edges_pct`, `close_tolerance_points`, and, where estimates are requested, `support_target`; there are no guessed numerical defaults. API contracts are documented in `/api/docs` and `/api/openapi.json`. Protect data and build/evaluation operations with an API key; health and contract documentation remain public.
 
 Data quality: exclude incomplete or invalid historical sessions and report dates and reasons; do not fill or fabricate bars. Require 375 unique session minutes for a historical day. A developing-day request requires all minutes through its requested completed bucket, not a complete future session. Ignore out-of-session rows such as 09:14 and ignore future bars when encoding a requested prefix. E alone never excludes a day.
 

@@ -54,7 +54,7 @@ class DatabaseBoundaryTests(unittest.TestCase):
         store = PatternStore()
         store.conn = Recorder()
         pattern = encode_day(bars(), CONFIG, complete=True)
-        store.save(CONFIG, [pattern], date(2026, 1, 1), date(2026, 1, 6))
+        store.save(CONFIG, [pattern], [], date(2026, 1, 1), date(2026, 1, 6))
         writes = [s for s, _ in store.conn.commands if s.lstrip().split()[0] in {"INSERT", "DELETE", "CREATE", "COMMENT"}]
         self.assertGreater(len(writes), 5)
         for sql in writes:

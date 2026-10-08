@@ -15,7 +15,13 @@ from .models import Bar
 
 SCHEMA = "nifty_trajectory_v1"
 MARKER = "nifty-trajectory-engine:owned:v1"
-TABLES = ("configurations", "clusters", "day_patterns")
+CORE_TABLES = ("configurations", "clusters", "day_patterns")
+LEDGER = "processed_days"
+TABLES = (*CORE_TABLES, LEDGER)
+SOURCE = ("NIFTY", "NSE", "1m")
+SESSION_FILTER = """symbol=%s AND exchange=%s AND timeframe=%s
+                 AND (timestamp_ist AT TIME ZONE 'Asia/Kolkata')::time >= TIME '09:15'
+                 AND (timestamp_ist AT TIME ZONE 'Asia/Kolkata')::time < TIME '15:30'"""
 
 
 def connection():
@@ -34,19 +40,33 @@ def read_source(start: date, end: date, position: int | None = None):
         conn.execute("SET TRANSACTION READ ONLY")
         conn.execute("SET LOCAL statement_timeout = '30s'")
         rows = conn.execute(
-            """SELECT timestamp_ist,open,high,low,close
+            f"""SELECT timestamp_ist,open,high,low,close
                FROM public.price_data
-               WHERE symbol=%s AND exchange=%s AND timeframe=%s
+               WHERE {SESSION_FILTER}
                  AND timestamp_ist >= %s AND timestamp_ist < %s
-                 AND (timestamp_ist AT TIME ZONE 'Asia/Kolkata')::time >= TIME '09:15'
-                 AND (timestamp_ist AT TIME ZONE 'Asia/Kolkata')::time < TIME '15:30'
                ORDER BY timestamp_ist""",
-            ("NIFTY", "NSE", "1m", lower, upper),
+            (*SOURCE, lower, upper),
         ).fetchall()
     groups = defaultdict(list)
     for row in rows:
         groups[row["timestamp_ist"].astimezone(IST).date()].append(row)
     return groups
+
+
+def source_dates(through: date):
+    """Distinct IST session dates with in-session source rows, up to and including `through`."""
+    upper = datetime.combine(through + timedelta(days=1), time(0), IST)
+    with connection() as conn:
+        conn.execute("SET TRANSACTION READ ONLY")
+        conn.execute("SET LOCAL statement_timeout = '120s'")
+        rows = conn.execute(
+            f"""SELECT DISTINCT (timestamp_ist AT TIME ZONE 'Asia/Kolkata')::date AS trade_date
+               FROM public.price_data
+               WHERE {SESSION_FILTER} AND timestamp_ist < %s
+               ORDER BY 1""",
+            (*SOURCE, upper),
+        ).fetchall()
+    return [r["trade_date"] for r in rows]
 
 
 def build_patterns(groups, config):
@@ -78,6 +98,7 @@ class PatternStore:
         ).fetchone()
 
     def verify_owned(self):
+        """Require the owned schema and core tables; return {table: marker} for every present table."""
         schema = self._schema()
         if schema is None:
             raise PatternError("history_not_built", "Build historical patterns before matching or evaluation", status=409)
@@ -89,14 +110,36 @@ class PatternStore:
                WHERE n.nspname=%s AND c.relname = ANY(%s) AND c.relkind='r'""",
             (SCHEMA, list(TABLES)),
         ).fetchall()
-        if {r["relname"] for r in rows if r["marker"] == MARKER} != set(TABLES):
+        found = {r["relname"]: r["marker"] for r in rows}
+        # The ledger may be absent on a pre-ledger schema, but never present and unmarked.
+        if any(found.get(t) != MARKER for t in CORE_TABLES) or found.get(LEDGER, MARKER) != MARKER:
             raise PatternError("storage_collision", "Refusing writes to absent or unmarked existing tables", status=409)
+        return found
+
+    def _create_ledger(self, backfill):
+        self.conn.execute("""
+            CREATE TABLE nifty_trajectory_v1.processed_days (
+                config_id TEXT NOT NULL REFERENCES nifty_trajectory_v1.configurations(id),
+                trade_date DATE NOT NULL,
+                status TEXT NOT NULL CHECK (status IN ('processed','excluded')),
+                reason TEXT,
+                details JSONB NOT NULL DEFAULT '{}',
+                processed_at TIMESTAMPTZ NOT NULL DEFAULT now(),
+                PRIMARY KEY (config_id,trade_date)
+            )""")
+        self.conn.execute("COMMENT ON TABLE nifty_trajectory_v1.processed_days IS 'nifty-trajectory-engine:owned:v1'")
+        if backfill:
+            # Upgrade of a pre-ledger schema: days already stored count as processed.
+            self.conn.execute("""
+                INSERT INTO nifty_trajectory_v1.processed_days(config_id,trade_date,status)
+                SELECT config_id,trade_date,'processed' FROM nifty_trajectory_v1.day_patterns""")
 
     def initialize(self):
         # Serializes initial schema creation and all project builds, not source tables.
         self.conn.execute("SELECT pg_advisory_xact_lock(761204831)")
         if self._schema() is not None:
-            self.verify_owned()
+            if LEDGER not in self.verify_owned():
+                self._create_ledger(backfill=True)
             return False
         self.conn.execute("CREATE SCHEMA nifty_trajectory_v1")
         self.conn.execute("COMMENT ON SCHEMA nifty_trajectory_v1 IS 'nifty-trajectory-engine:owned:v1'")
@@ -121,22 +164,36 @@ class PatternStore:
             )""")
         self.conn.execute("CREATE INDEX nifty_clusters_prefix_idx ON nifty_trajectory_v1.clusters (config_id,path_code text_pattern_ops)")
         self.conn.execute("CREATE INDEX nifty_days_cluster_date_idx ON nifty_trajectory_v1.day_patterns (config_id,path_code,trade_date)")
-        for table in TABLES:
+        for table in CORE_TABLES:
             # Identifiers come exclusively from the fixed allowlist, never requests.
             self.conn.execute(f"COMMENT ON TABLE {SCHEMA}.{table} IS 'nifty-trajectory-engine:owned:v1'")
+        self._create_ledger(backfill=False)
         return True
 
-    def save(self, config, patterns, start, end):
+    def register(self, config):
         created = self.initialize()
         self.conn.execute(
             "INSERT INTO nifty_trajectory_v1.configurations(id,settings) VALUES (%s,%s) ON CONFLICT (id) DO NOTHING",
             (config.identity, Jsonb(config.canonical())),
         )
+        return created
+
+    def save(self, config, patterns, exclusions, start, end):
+        """Replace derived rows and ledger flags for a whole inclusive date range."""
+        return self._replace(config, patterns, exclusions, "trade_date BETWEEN %s AND %s", (start, end))
+
+    def save_dates(self, config, patterns, exclusions, dates):
+        """Replace derived rows and ledger flags for exactly these dates."""
+        return self._replace(config, patterns, exclusions, "trade_date = ANY(%s)", (list(dates),))
+
+    def _replace(self, config, patterns, exclusions, where, params):
+        # `where` is one of the fixed clauses above, never request text.
+        created = self.register(config)
         # Rebuilds may remove stale derived records for excluded days, only in owned tables.
-        self.conn.execute(
-            "DELETE FROM nifty_trajectory_v1.day_patterns WHERE config_id=%s AND trade_date BETWEEN %s AND %s",
-            (config.identity, start, end),
-        )
+        for table in ("day_patterns", LEDGER):
+            self.conn.execute(
+                f"DELETE FROM {SCHEMA}.{table} WHERE config_id=%s AND {where}", (config.identity, *params),
+            )
         with self.conn.cursor() as cursor:
             cursor.executemany(
                 "INSERT INTO nifty_trajectory_v1.clusters(config_id,path_code) VALUES (%s,%s) ON CONFLICT DO NOTHING",
@@ -147,14 +204,34 @@ class PatternStore:
                    VALUES (%s,%s,%s,%s)""",
                 [(config.identity, p["trade_date"], p["path_code"], Jsonb(p)) for p in patterns],
             )
+            cursor.executemany(
+                """INSERT INTO nifty_trajectory_v1.processed_days(config_id,trade_date,status,reason,details)
+                   VALUES (%s,%s,%s,%s,%s)""",
+                [(config.identity, p["trade_date"], "processed", None, Jsonb({})) for p in patterns]
+                + [(config.identity, e["trade_date"], "excluded", e["reason"], Jsonb(e["details"])) for e in exclusions],
+            )
         return created
 
+    def reset(self, config):
+        """Delete one configuration's derived rows and ledger flags; source data is never touched."""
+        created = self.register(config)
+        for table in (LEDGER, "day_patterns", "clusters"):
+            self.conn.execute(f"DELETE FROM {SCHEMA}.{table} WHERE config_id=%s", (config.identity,))
+        return created
+
+    def ledger(self, config_id):
+        return {r["trade_date"]: r["status"] for r in self.conn.execute(
+            "SELECT trade_date,status FROM nifty_trajectory_v1.processed_days WHERE config_id=%s", (config_id,),
+        ).fetchall()}
+
     def require_configuration(self, config_id):
+        """Open a read-only snapshot; return whether the ledger table exists yet."""
         self.conn.execute("SET TRANSACTION ISOLATION LEVEL REPEATABLE READ, READ ONLY")
         self.conn.execute("SET LOCAL statement_timeout = '30s'")
-        self.verify_owned()
+        found = self.verify_owned()
         if not self.conn.execute("SELECT 1 FROM nifty_trajectory_v1.configurations WHERE id=%s", (config_id,)).fetchone():
             raise PatternError("configuration_not_built", "Build history with this exact configuration first", status=409)
+        return LEDGER in found
 
     def count_prefix(self, config_id, prefix, as_of):
         return self.conn.execute("""
@@ -180,9 +257,19 @@ class PatternStore:
             (config_id, start, end),
         ).fetchall()]
 
-    def status(self, config_id):
-        return self.conn.execute("""
+    def status(self, config_id, ledger=True):
+        result = self.conn.execute("""
             SELECT COUNT(*) AS stored_days,MIN(trade_date)::text AS first_date,
                    MAX(trade_date)::text AS last_date,COUNT(DISTINCT path_code) AS unique_patterns
             FROM nifty_trajectory_v1.day_patterns WHERE config_id=%s""", (config_id,),
         ).fetchone()
+        if not ledger:
+            # Pre-ledger schema that no write operation has upgraded yet.
+            return {**result, "processed_days": None, "excluded_days": None, "last_processed_date": None}
+        flags = self.conn.execute("""
+            SELECT COUNT(*) FILTER (WHERE status='processed') AS processed_days,
+                   COUNT(*) FILTER (WHERE status='excluded') AS excluded_days,
+                   MAX(trade_date)::text AS last_processed_date
+            FROM nifty_trajectory_v1.processed_days WHERE config_id=%s""", (config_id,),
+        ).fetchone()
+        return {**result, **flags}

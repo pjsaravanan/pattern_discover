@@ -81,6 +81,11 @@ class BuildRequest(StrictModel):
         return self
 
 
+class SyncRequest(StrictModel):
+    config: PatternConfig
+    rebuild: bool = False
+
+
 class MatchRequest(StrictModel):
     config: PatternConfig
     support_target: int = Field(ge=1, le=100000)
@@ -206,12 +211,36 @@ class BuildResponse(BaseModel):
     created_project_storage: bool
 
 
+class SyncBatch(BaseModel):
+    start_date: date
+    end_date: date
+    days: int
+
+
+class SyncResponse(BaseModel):
+    status: Literal["synced"]
+    config_id: str
+    source: str
+    rebuild: bool
+    through_date: date
+    source_days: int
+    already_processed_days: int
+    pending_days: int
+    stored_days: int
+    excluded_sessions: list[ExcludedSession]
+    batches: list[SyncBatch]
+    created_project_storage: bool
+
+
 class HistoryStatus(BaseModel):
     config_id: str
     stored_days: int
     first_date: date | None
     last_date: date | None
     unique_patterns: int
+    processed_days: int | None
+    excluded_days: int | None
+    last_processed_date: date | None
 
 
 class EvaluationResponse(BaseModel):

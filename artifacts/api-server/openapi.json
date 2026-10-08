@@ -12,7 +12,7 @@
           "patterns"
         ],
         "summary": "Encode Pattern",
-        "description": "Encode supplied one-minute OHLC bars. Future bars are ignored for prefixes.\n\nAll statistical configuration is explicit. Set complete_session=true to\nrequire all 375 minutes and return the separate final bucket and outcomes.\nThis endpoint never connects to the database.",
+        "description": "Encode supplied one-minute OHLC bars. Future bars are ignored for prefixes.\n\nAll statistical configuration is explicit. Set complete_session=true to\nrequire all 375 minutes and return the separate final bucket and outcomes.\nThis endpoint never connects to the database. CLI: `encode`.",
         "operationId": "encodePattern",
         "requestBody": {
           "content": {
@@ -99,7 +99,7 @@
           "history"
         ],
         "summary": "Build History",
-        "description": "Read NIFTY/NSE/1m source bars and persist only project-owned derived records.\n\nRanges are inclusive and bounded to 366 calendar days per request; build\nsuccessive ranges for longer history. Rebuilding replaces only derived\nrecords for this configuration/date range, never source records.\nIncomplete/invalid sessions are reported, not repaired. E days are retained.\nDates with no source rows are not assumed to be trading sessions.",
+        "description": "Read NIFTY/NSE/1m source bars and persist only project-owned derived records.\n\nRanges are inclusive and bounded to 366 calendar days per request; use\nhistory/sync to process all history without manual ranges. Rebuilding\nreplaces derived records and processed-day flags for this configuration/\ndate range, never source records. Incomplete/invalid sessions are reported\nand flagged, not repaired. E days are retained. Dates with no source rows\nare not assumed to be trading sessions. CLI: `build`.",
         "operationId": "buildHistory",
         "requestBody": {
           "content": {
@@ -180,13 +180,100 @@
         ]
       }
     },
+    "/history/sync": {
+      "post": {
+        "tags": [
+          "history"
+        ],
+        "summary": "Sync History",
+        "description": "Process every source session not yet flagged for this configuration.\n\nThe first sync processes all available history; later syncs process only\nnew or gap dates, plus excluded dates among the three most recent sessions.\nOnly sessions through the last complete session (15:30 IST) are processed.\nrebuild=true deletes this configuration's derived records and flags, then\nreprocesses everything. Each batch commits separately, so an interrupted\nsync resumes on the next call. Long-running on a first load. CLI: `sync`.",
+        "operationId": "syncHistory",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/SyncRequest"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/SyncResponse"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Unauthorized",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "Not Found",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "409": {
+            "description": "Conflict",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Unprocessable Content",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "503": {
+            "description": "Service Unavailable",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          }
+        },
+        "security": [
+          {
+            "APIKeyHeader": []
+          }
+        ]
+      }
+    },
     "/history/status": {
       "get": {
         "tags": [
           "history"
         ],
         "summary": "History Status",
-        "description": "Report stored coverage for a previously built configuration.",
+        "description": "Report stored coverage and processed-day flags for a built configuration. CLI: `status`.",
         "operationId": "historyStatus",
         "security": [
           {
@@ -277,7 +364,7 @@
           "patterns"
         ],
         "summary": "Match Pattern",
-        "description": "Match completed hourly tokens using strictly earlier historical dates.\n\nSupply bars, or omit them to load the requested developing day from the\napproved source. Backoff never returns a distribution with fewer than N\nmembers. Outcome windows always start at the requested hour, not the\nshorter selected prefix. Position 7 is never a matching key.",
+        "description": "Match completed hourly tokens using strictly earlier historical dates.\n\nSupply bars, or omit them to load the requested developing day from the\napproved source. Backoff never returns a distribution with fewer than N\nmembers. Outcome windows always start at the requested hour, not the\nshorter selected prefix. Position 7 is never a matching key. CLI: `match`.",
         "operationId": "matchPattern",
         "requestBody": {
           "content": {
@@ -364,7 +451,7 @@
           "evaluation"
         ],
         "summary": "Evaluate",
-        "description": "Evaluate built history chronologically against all-prior-days outcomes.\n\nReturns direction hit rate, three-class Brier score, P(Up) calibration,\nempirical P10\u2013P90 coverage and support/backoff by hour. Conditional and\nbaseline comparisons use the same supported test days. No evaluation\nwrites, time weighting, fitted ML, or future-day training occurs.",
+        "description": "Evaluate built history chronologically against all-prior-days outcomes.\n\nReturns direction hit rate, three-class Brier score, P(Up) calibration,\nempirical P10\u2013P90 coverage and support/backoff by hour. Conditional and\nbaseline comparisons use the same supported test days. No evaluation\nwrites, time weighting, fitted ML, or future-day training occurs. CLI: `evaluate`.",
         "operationId": "evaluateWalkForward",
         "requestBody": {
           "content": {
@@ -937,6 +1024,40 @@
           "unique_patterns": {
             "type": "integer",
             "title": "Unique Patterns"
+          },
+          "processed_days": {
+            "anyOf": [
+              {
+                "type": "integer"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Processed Days"
+          },
+          "excluded_days": {
+            "anyOf": [
+              {
+                "type": "integer"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Excluded Days"
+          },
+          "last_processed_date": {
+            "anyOf": [
+              {
+                "type": "string",
+                "format": "date"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Last Processed Date"
           }
         },
         "type": "object",
@@ -945,7 +1066,10 @@
           "stored_days",
           "first_date",
           "last_date",
-          "unique_patterns"
+          "unique_patterns",
+          "processed_days",
+          "excluded_days",
+          "last_processed_date"
         ],
         "title": "HistoryStatus"
       },
@@ -1430,6 +1554,125 @@
           "estimate"
         ],
         "title": "PredictionResponse"
+      },
+      "SyncBatch": {
+        "properties": {
+          "start_date": {
+            "type": "string",
+            "format": "date",
+            "title": "Start Date"
+          },
+          "end_date": {
+            "type": "string",
+            "format": "date",
+            "title": "End Date"
+          },
+          "days": {
+            "type": "integer",
+            "title": "Days"
+          }
+        },
+        "type": "object",
+        "required": [
+          "start_date",
+          "end_date",
+          "days"
+        ],
+        "title": "SyncBatch"
+      },
+      "SyncRequest": {
+        "properties": {
+          "config": {
+            "$ref": "#/components/schemas/PatternConfig"
+          },
+          "rebuild": {
+            "type": "boolean",
+            "title": "Rebuild",
+            "default": false
+          }
+        },
+        "additionalProperties": false,
+        "type": "object",
+        "required": [
+          "config"
+        ],
+        "title": "SyncRequest"
+      },
+      "SyncResponse": {
+        "properties": {
+          "status": {
+            "type": "string",
+            "const": "synced",
+            "title": "Status"
+          },
+          "config_id": {
+            "type": "string",
+            "title": "Config Id"
+          },
+          "source": {
+            "type": "string",
+            "title": "Source"
+          },
+          "rebuild": {
+            "type": "boolean",
+            "title": "Rebuild"
+          },
+          "through_date": {
+            "type": "string",
+            "format": "date",
+            "title": "Through Date"
+          },
+          "source_days": {
+            "type": "integer",
+            "title": "Source Days"
+          },
+          "already_processed_days": {
+            "type": "integer",
+            "title": "Already Processed Days"
+          },
+          "pending_days": {
+            "type": "integer",
+            "title": "Pending Days"
+          },
+          "stored_days": {
+            "type": "integer",
+            "title": "Stored Days"
+          },
+          "excluded_sessions": {
+            "items": {
+              "$ref": "#/components/schemas/ExcludedSession"
+            },
+            "type": "array",
+            "title": "Excluded Sessions"
+          },
+          "batches": {
+            "items": {
+              "$ref": "#/components/schemas/SyncBatch"
+            },
+            "type": "array",
+            "title": "Batches"
+          },
+          "created_project_storage": {
+            "type": "boolean",
+            "title": "Created Project Storage"
+          }
+        },
+        "type": "object",
+        "required": [
+          "status",
+          "config_id",
+          "source",
+          "rebuild",
+          "through_date",
+          "source_days",
+          "already_processed_days",
+          "pending_days",
+          "stored_days",
+          "excluded_sessions",
+          "batches",
+          "created_project_storage"
+        ],
+        "title": "SyncResponse"
       }
     },
     "securitySchemes": {
