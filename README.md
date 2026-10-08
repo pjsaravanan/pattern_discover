@@ -114,6 +114,17 @@ The checked-in validation reports contain the initial 59-day evaluation and a re
 
 `uv run python scripts/verify_live.py [--base-url http://127.0.0.1:8080]` verifies a running API end to end, including a database-backed build and evaluation. It writes only project-owned derived tables. `--full-history` syncs the documented trial configuration across all history; it is not a read-only command.
 
+## Deploying on Railway
+
+No `.env` file is used there: set **Variables** on each service (Raw Editor accepts `.env` contents). Railway supplies `PORT`.
+
+| Service | Config file | Runs |
+|---|---|---|
+| API | `railway.json` (default) | `nifty serve --host 0.0.0.0`, health check `/api/healthz` |
+| Daily sync (cron) | `railway.cron.json` (set as the service's config file path in its Settings) | `nifty sync` for the trial configuration, weekdays 12:30 UTC (18:00 IST), then exits |
+
+Both services need `VPS_DATABASE_URL`. If the API service gets a public domain, set `NIFTY_API_KEY`; otherwise every data endpoint, including `sync --rebuild`, is open to the internet. The VPS PostgreSQL must accept connections from Railway's outbound addresses, which are dynamic unless static IPs are enabled. Railpack builds with `uv sync --locked`, so keep `uv.lock` in sync with `pyproject.toml`. Change the cron schedule or configuration in `railway.cron.json` as needed; cron schedules are UTC.
+
 ## Indexes
 
 Project-owned indexes (prefix lookup on clusters, cluster/date on day patterns, plus primary keys) are created with the schema and restored by the next build or sync if missing. The source table `public.price_data` is read-only to this project: `nifty check` reports whether source reads use an index and, if not, recommends one for the database owner to create. The project never creates it.
