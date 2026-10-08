@@ -7,12 +7,12 @@ The original [PRS](../../attached_assets/Product_Requirements_Specification_1791
 From the workspace root:
 
 ```sh
-pnpm --filter @workspace/api-server run dev
-pnpm --filter @workspace/api-server run test
-pnpm --filter @workspace/api-server run build
+uv sync --frozen
+PORT=8080 PYTHONPATH=artifacts/api-server uv run --frozen python artifacts/api-server/run.py
+PYTHONPATH=artifacts/api-server uv run --frozen python -m unittest discover -s artifacts/api-server/tests -v
 ```
 
-Runtime dependencies are in the root `pyproject.toml` / `uv.lock`. Deployment uses `uv sync --frozen`; development uses the managed `.pythonlibs` environment. The Node workspace package is only a command adapter.
+Runtime dependencies are in the root `pyproject.toml` / `uv.lock`.
 
 - `PORT`: required service port.
 - `VPS_DATABASE_URL`: existing VPS PostgreSQL connection, used privately by the server.
@@ -95,8 +95,7 @@ The checked-in validation reports contain the initial 59-day evaluation and a re
 After API model/route changes:
 
 ```sh
-UV_PROJECT_ENVIRONMENT=.pythonlibs uv run --frozen --no-sync python artifacts/api-server/export_openapi.py
-pnpm --filter @workspace/api-spec run codegen
+PYTHONPATH=artifacts/api-server uv run --frozen python artifacts/api-server/export_openapi.py
 ```
 
-The exported shared contract uses `/api` as its server prefix and preserves `healthCheck` / `HealthStatus`. No frontend is introduced or modified.
+This writes `artifacts/api-server/openapi.json`, using `/api` as its server prefix and preserving `healthCheck` / `HealthStatus`. There is no frontend.

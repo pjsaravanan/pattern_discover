@@ -1,4 +1,4 @@
-"""Export the Python API contract for the existing monorepo code generators."""
+"""Export the Python API contract as a checked-in OpenAPI JSON file."""
 
 import json
 from pathlib import Path
@@ -14,6 +14,5 @@ def contract():
 
 
 if __name__ == "__main__":
-    destination = Path(__file__).resolve().parents[2] / "lib/api-spec/openapi.yaml"
-    # JSON is a valid YAML 1.2 document. No additional YAML runtime dependency.
+    destination = Path(__file__).resolve().parent / "openapi.json"
     destination.write_text(json.dumps(contract(), indent=2) + "\n")

@@ -310,9 +310,11 @@ No profitability claim or fixed production configuration follows from these limi
 
 **In scope (v1):** NIFTY index; one-minute OHLC source data resampled into hourly path buckets; a Python API only (no UI); historical build; hourly prefix matching; magnitude-band coding; JSON output; PostgreSQL storage in new project-owned tables; and walk-forward evaluation.
 
-**Implementation target:** Replace the existing Express/TypeScript API Server artifact with Python rather than create a separate service or project. Preserve `GET /api/healthz` returning `{"status":"ok"}` and leave the image-analysis web artifact unchanged.
+**Implementation target:** Replace the existing Express/TypeScript API Server artifact with Python rather than create a separate service or project. Preserve `GET /api/healthz` returning `{"status":"ok"}`.
 
-**HTTP framework:** FastAPI is approved. HTTP request/response contracts are implemented and documented in `/api/docs`, `/api/openapi.json`, and the synchronized shared OpenAPI contract. Errors use a consistent JSON envelope containing `error`, `message`, and `details`, without credential or raw-input echoes.
+**Deviation (2026-10-08):** The repository is Python-only. All TypeScript/Node workspace packages (image-analysis web artifact, mockup sandbox, generated TS/Zod clients, Drizzle DB package, pnpm workspace) and Replit scaffolding were removed. The exported contract is `artifacts/api-server/openapi.json`.
+
+**HTTP framework:** FastAPI is approved. HTTP request/response contracts are implemented and documented in `/api/docs`, `/api/openapi.json`, and the exported OpenAPI file. Errors use a consistent JSON envelope containing `error`, `message`, and `details`, without credential or raw-input echoes.
 
 Approved completion boundary: implement JSON operations for historical build, encoding supplied one-minute bars, developing-day matching, and walk-forward evaluation. Require explicit `band_edges_pct`, `close_tolerance_points`, and, where estimates are requested, `support_target`; there are no guessed numerical defaults. API contracts are documented in `/api/docs` and `/api/openapi.json`. Protect data and build/evaluation operations with an API key; health and contract documentation remain public.
 
