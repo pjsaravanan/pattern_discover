@@ -436,4 +436,11 @@ Living backlog for this project. Every idea or action item raised in discussion,
 | D3 | Redirect `/` and `/docs` to `/api/docs` | User 2026-10-08 | idea |
 | D4 | Rotate the VPS database password (it appeared in a working session) | Operations 2026-10-08 | open |
 | D5 | Railway API key set and verified (401 without key) | Operations 2026-10-08 | done |
-| D6 | Daily in-process sync live on Railway at 22:30 IST; confirm first run result | Operations 2026-10-08 | in progress |
+| D6 | Daily in-process sync live on Railway at 22:30 IST; confirm first run result | Operations 2026-10-08 | done (first run 2026-10-08 22:30, synced, 0 pending because `price_data` lacked 2026-10-08) |
+| D7 | `price_data` missed 2026-10-08 as well (chronosdata 22:03 run fetched nothing again); second occurrence of chronosdata N2 | Operations 2026-10-09 | done (filled 2026-10-09 via chronosdata incremental; synced, 1,657 days through 2026-10-08); root cause tracked as chronosdata N2 |
+
+### E. Cross-project
+
+| ID | Item | Source | Status |
+|---|---|---|---|
+| E1 | gocharting comparison (2026-10-08): the "price vs open" rule beats the engine at every hour (0.74 vs 0.66 at 10:15; 0.91 vs 0.65 at 15:15, Jul–Oct 2026); gocharting would use the engine only once A1/B2/B8 show value — cross-ref gocharting `BACKLOG.md` A17 | Review 2026-10-08 (gocharting session) | idea |
